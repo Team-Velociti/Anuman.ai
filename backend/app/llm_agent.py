@@ -3,6 +3,9 @@ import os
 import google.generativeai as genai
 from app.weather import get_weather
 
+# Import DB function to get past context (Kartik ka function)
+from app.database import get_chat_history 
+
 # Configure SDK strictly using the environment variable
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
@@ -27,18 +30,27 @@ weather_tool = genai.types.Tool(
     ]
 )
 
-# Initialize the model explicitly
+# Initialize the model explicitly with a Persona (System Instruction)
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
-    tools=[weather_tool]
+    tools=[weather_tool],
+    system_instruction="You are Anuman.ai, an intelligent conversational weather assistant built for the Ministry of Earth Sciences. You help farmers, commuters, and citizens in India. Keep your answers concise, natural, and highly actionable (e.g., crop advice for farmers). Support Hindi and English."
 )
 
-async def process_user_query(user_input: str) -> str:
-    """Starts a chat session, processes tools, and returns the natural language response."""
+# FIXED: Renamed to match Hemang's main.py and added session_id parameter
+async def process_gemini_chat(session_id: str, user_message: str, location_key: str = None) -> str:
+    """Starts/Resumes a chat session, processes tools, and returns the AI response."""
     try:
-        chat = model.start_chat()
-        response = await chat.send_message_async(user_input)
+        # 1. Fetch previous chat history from DB so Gemini remembers context
+        past_history = await get_chat_history(session_id)
+        
+        # 2. Start chat WITH history (fixes the amnesia bug)
+        chat = model.start_chat(history=past_history if past_history else [])
+        
+        # 3. Send the new message
+        response = await chat.send_message_async(user_message)
 
+        # 4. Handle Function Calling (if Gemini decides to check weather)
         if response.function_call:
             fc = response.function_call
             
@@ -46,10 +58,10 @@ async def process_user_query(user_input: str) -> str:
                 # Extract arguments safely
                 location = fc.args["location_name"]
                 
-                # Automatically execute the async Python function
+                # Automatically execute your async Python function
                 weather_data = await get_weather(location_name=location)
                 
-                # Return the JSON response to the model
+                # Return the JSON response back to the model so it can generate a final answer
                 response = await chat.send_message_async(
                     [{
                         "function_response": {
@@ -61,4 +73,5 @@ async def process_user_query(user_input: str) -> str:
 
         return response.text
     except Exception as e:
-        return f"Error processing query: {str(e)}"
+        print(f"[ERROR] Gemini Agent failed: {str(e)}")
+        return "Sorry, I am facing some issues connecting to the weather servers right now. Please try again in a moment."

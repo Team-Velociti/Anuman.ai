@@ -90,3 +90,33 @@ async def text_to_speech(text: str) -> bytes:
         print(f"Unexpected error in TTS: {e}")
         
     return b""
+
+# =====================================================================
+# BRIDGE FUNCTION FOR HEMANG'S main.py
+# =====================================================================
+async def process_sarvam_audio(session_id: str, audio_data: bytes, filename: str) -> dict:
+    """
+    Wrapper function that Hemang's main.py calls.
+    It takes the raw audio, gets the transcript via Sarvam STT, and returns it.
+    """
+    print(f"[INFO] Processing voice upload for session: {session_id}, file: {filename}")
+    
+    try:
+        # Step 1: Convert uploaded audio to text
+        transcript = await speech_to_text(audio_data)
+        
+        # Step 2: Return dictionary format that Hemang's API expects
+        return {
+            "transcript": transcript,
+            # Note: Right now we are just returning STT. 
+            # If we want the AI to speak back, we can integrate text_to_speech here later 
+            # and return the base64 string or URL.
+            "tts_audio_url": None 
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Voice routing failed for {session_id}: {str(e)}")
+        return {
+            "transcript": "",
+            "tts_audio_url": None
+        }

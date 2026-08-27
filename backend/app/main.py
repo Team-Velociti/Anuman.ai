@@ -5,29 +5,33 @@ from pydantic import BaseModel
 from typing import Optional, Any
 
 # =====================================================================
-# IMPORTS FROM YOUR / GYANI / SHREYA / KARTIK'S PIPELINE
+# IMPORTS FROM GYANI / SHAKSHAM / SHREYA / KARTIK'S PIPELINE
 # =====================================================================
-# Make sure these files exist in the same directory or adjust package path
 try:
-    from llm_agent import process_gemini_chat  # Your Gemini 1.5 Flash agent call
-    from voice_router import process_sarvam_audio  # Your Sarvam AI Voice router
-    from weather import fetch_open_meteo_data  # Your Open-Meteo script
-    from db_service import save_chat_to_db, get_chat_history  # DB team's functions
+    from llm_agent import process_gemini_chat  # Gemini 1.5 Flash agent
+    from voice_router import process_sarvam_audio  # Sarvam AI Voice router
+    from weather import fetch_open_meteo_data  # Open-Meteo script
+    # FIXED: Corrected file name to database.py and added cache functions
+    from database import (
+        save_chat_to_db, 
+        get_chat_history, 
+        get_cached_weather, 
+        update_weather_cache
+    ) 
 except ImportError as e:
-    # Log warning for local standalone boot-up checks
     print(f"[WARNING] Module import issue: {e}. Ensure teammates' scripts are in path.")
 
 # Initialize FastAPI App
 app = FastAPI(
     title="Anuman.ai WeatherGPT Backend Router",
     version="2.0.0",
-    description="Traffic controller routing Next.js PWA requests to Gemini, Sarvam AI, and PostgreSQL/MongoDB."
+    description="Traffic controller routing Next.js PWA requests to Gemini, Sarvam AI, and Firebase."
 )
 
 # Mandatory CORS configuration for Next.js Frontend (Shruti)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production ready: replace with exact Next.js URL if needed
+    allow_origins=["*"],  # For production, replace "*" with exact Next.js URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,7 +52,7 @@ class ChatPayload(BaseModel):
 async def handle_chat(payload: ChatPayload):
     """
     1. Pass prompt to Gemini 1.5 Flash (llm_agent.py)
-    2. Stream payload context to DB (save_chat_to_db)
+    2. Save payload context to DB (save_chat_to_db)
     3. Return AI response and updated chat history to Shruti (Frontend)
     """
     try:
@@ -58,17 +62,17 @@ async def handle_chat(payload: ChatPayload):
             user_message=payload.message,
             location_key=payload.location_key
         )
-        
+
         # Log & save message to DB (Shreya/Kartik)
         await save_chat_to_db(
             session_id=payload.session_id,
             user_prompt=payload.message,
             ai_response=ai_response_text
         )
-        
+
         # Retrieve context history for frontend sync
         updated_history = await get_chat_history(payload.session_id)
-        
+
         return {
             "status": "success",
             "session_id": payload.session_id,
@@ -99,7 +103,7 @@ async def handle_voice(
             audio_data=audio_bytes,
             filename=file.filename
         )
-        
+
         return {
             "status": "success",
             "session_id": session_id,
@@ -110,18 +114,31 @@ async def handle_voice(
         raise HTTPException(status_code=500, detail=f"Voice processing failed: {str(e)}")
 
 # ---------------------------------------------------------------------
-# 3. /api/weather (The Dashboard Flow)
+# 3. /api/weather (The Dashboard Flow - FIXED WITH CACHING)
 # ---------------------------------------------------------------------
 @app.get("/api/weather", tags=["Dashboard Weather"])
 async def handle_weather(
     location_key: str = Query(..., description="Target location (guntur, vit_ap, vijayawada, vizag)")
 ):
     """
-    1. Trigger weather fetcher (weather.py)
-    2. Hand over raw weather JSON directly to Shruti to populate UI cards
+    1. Check Firebase Cache first.
+    2. If no cache or expired, fetch from Open-Meteo.
+    3. Save new data to cache and return to Shruti.
     """
     try:
-        weather_json = await fetch_open_meteo_data(location_key=location_key)
+        # Step 1: Check Database Cache (Kartik's code)
+        weather_json = await get_cached_weather(location_key=location_key)
+        
+        # Step 2: If Cache is empty or expired, hit the actual API (Tera code)
+        if not weather_json:
+            print(f"[INFO] Cache miss for {location_key}. Fetching from Open-Meteo...")
+            weather_json = await fetch_open_meteo_data(location_key=location_key)
+            
+            # Step 3: Save the fresh data back to Firebase Cache
+            await update_weather_cache(location_key=location_key, new_data=weather_json)
+        else:
+            print(f"[INFO] Cache hit for {location_key}. Serving from Firebase.")
+
         return {
             "status": "success",
             "location": location_key,

@@ -276,7 +276,10 @@
                 const res = await fetch(`${API_BASE}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: query })
+                    body: JSON.stringify({ 
+                        message: query,
+                        session_id: "session_123" // <--- YEH LINE MISSING HAI TERE CODE MEIN
+                    })
                 });
                 const data = await res.json();
                 alert("AI Response: " + JSON.stringify(data));

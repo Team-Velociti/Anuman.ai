@@ -45,19 +45,31 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
         chat = model.start_chat(history=past_history if past_history else [])
         response = await chat.send_message_async(user_message)
 
-        if response.function_call:
-            fc = response.function_call
-            if fc.name == "get_weather":
-                location = fc.args["location_name"]
-                weather_data = await get_weather(location_name=location)
-                response = await chat.send_message_async(
-                    [{
-                        "function_response": {
-                            "name": "get_weather",
-                            "response": weather_data
-                        }
-                    }]
-                )
+        # Naye SDK ke liye function call check karne ka tareeqa
+        fc = None
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    fc = part.function_call
+                    break
+
+        if fc and fc.name == "get_weather":
+            location = fc.args["location_name"]
+            weather_data = await get_weather(location_name=location)
+            response = await chat.send_message_async(
+                [{
+                    "function_response": {
+                        "name": "get_weather",
+                        "response": {"result": weather_data}
+                    }
+                }]
+            )
+
+        return response.text
+    except Exception as e:
+        print(f"[ERROR] Gemini Agent failed: {str(e)}")
+        return "Sorry, I am facing some issues connecting to the weather servers right now. Please try again in a moment."
+        return response.text
 
         return response.text
     except Exception as e:

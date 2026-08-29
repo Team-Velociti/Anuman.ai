@@ -7,25 +7,25 @@ from app.database import get_chat_history
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
-weather_tool = genai.types.Tool(
-    function_declarations=[
-        genai.types.FunctionDeclaration(
-            name="get_weather",
-            description="Fetches current weather and daily forecast.",
-            parameters=genai.protos.Schema(
-                type=genai.protos.Type.OBJECT,
-                properties={
-                    "location_name": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                        description="The specific location to fetch weather for.",
-                        enum=["Inavalu", "VIT-AP", "Vijayawada", "Vizag"]
-                    )
+weather_tool = {
+    "function_declarations": [
+        {
+            "name": "get_weather",
+            "description": "Fetches current weather and daily forecast.",
+            "parameters": {
+                "type": "OBJECT",
+                "properties": {
+                    "location_name": {
+                        "type": "STRING",
+                        "description": "The specific location to fetch weather for.",
+                        "enum": ["Inavalu", "VIT-AP", "Vijayawada", "Vizag"]
+                    }
                 },
-                required=["location_name"]
-            )
-        )
+                "required": ["location_name"]
+            }
+        }
     ]
-)
+}
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",

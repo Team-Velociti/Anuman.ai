@@ -12,11 +12,11 @@ weather_tool = genai.types.Tool(
         genai.types.FunctionDeclaration(
             name="get_weather",
             description="Fetches current weather and daily forecast.",
-            parameters=genai.types.Schema(
-                type=genai.types.Type.OBJECT,
+            parameters=genai.protos.Schema(
+                type=genai.protos.Type.OBJECT,
                 properties={
-                    "location_name": genai.types.Schema(
-                        type=genai.types.Type.STRING,
+                    "location_name": genai.protos.Schema(
+                        type=genai.protos.Type.STRING,
                         description="The specific location to fetch weather for.",
                         enum=["Inavalu", "VIT-AP", "Vijayawada", "Vizag"]
                     )

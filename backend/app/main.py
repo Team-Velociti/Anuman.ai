@@ -5,14 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-try:
-    from llm_agent import process_gemini_chat  
-    from voice_router import process_sarvam_audio  
-    from weather import fetch_open_meteo_data  
-    # FIXED: Changed db_service to database to match your filename
-    from database import save_chat_to_db, get_chat_history  
-except ImportError as e:
-    print(f"[WARNING] Module import issue: {e}")
+from app.llm_agent import process_gemini_chat
+from app.voice_router import process_sarvam_audio
+from app.weather import fetch_open_meteo_data
+from app.database import save_chat_to_db, get_chat_history
 
 app = FastAPI(title="Anuman.ai Backend")
 

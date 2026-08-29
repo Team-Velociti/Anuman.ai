@@ -6,11 +6,11 @@
 <title>Anuman.ai - Intelligent Weather Assistant</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        "colors": {
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
                 "primary": "#89ceff",
                 "primary-container": "#0ea5e9",
                 "background": "#F9FAFB",
@@ -21,10 +21,10 @@
                 "surface-container-lowest": "#0e0e0e",
                 "on-surface": "#111827",
                 "dark-on-surface": "#e2e2e2",
+          }
         }
       }
     }
-  }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -65,7 +65,6 @@
         .mic-fab {
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        /* THE FIX: Changed trajectory to fly towards the right side into the input bar */
         .mic-typing-state {
             transform: translate(80px, 180px) scale(0.1) !important;
             opacity: 0 !important;
@@ -139,33 +138,30 @@
         
         <!-- Suggestion Chips 2x2 Grid -->
         <div class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs" style="animation: fadeInUp 0.5s ease 2s forwards;">
-            <button class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
+            <button onclick="sendLocationQuery('Inavalu')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Inavalu
             </button>
-            <button class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
+            <button onclick="sendLocationQuery('VIT-AP')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> VIT-AP
             </button>
-            <button class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
+            <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada
             </button>
-            <button class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
+            <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur
             </button>
         </div>
         
         <!-- Input Box -->
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
-            <!-- THE FIX: Increased right padding (pr-24) to fit both small mic and send button safely -->
             <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-24 py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
             
-            <!-- Action Buttons Container (Inside Input Bar) -->
+            <!-- Action Buttons Container -->
             <div class="absolute right-2 flex items-center gap-1">
-                <!-- Small Mic Button (Appears when typing) -->
                 <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none">
                     <span class="material-symbols-outlined text-[24px]">mic</span>
                 </button>
 
-                <!-- Send Button -->
                 <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none">
                     <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
                 </button>
@@ -206,15 +202,15 @@
 </div>
 
 <script>
+    const API_BASE = "https://anuman-ai.onrender.com";
+
     document.addEventListener('DOMContentLoaded', () => {
-        // Splash Screen hides after 3 seconds
         const splash = document.getElementById('splash');
         setTimeout(() => {
             splash.style.opacity = '0';
             splash.style.visibility = 'hidden';
         }, 3000); 
 
-        // Theme Toggle
         const themeToggleBtn = document.getElementById('theme-toggle');
         const html = document.documentElement;
         
@@ -232,7 +228,6 @@
             }
         });
 
-        // THE FIX: Mic "Flying into the bar" & Small Mic logic
         const chatInput = document.getElementById('chat-input');
         const micBtn = document.getElementById('mic-btn');
         const micAura = document.getElementById('mic-aura'); 
@@ -241,12 +236,10 @@
 
         chatInput.addEventListener('input', (e) => {
             if (e.target.value.trim().length > 0) {
-                // Fly Down towards the right
                 micBtn.classList.add('mic-typing-state');
                 micBtn.classList.remove('fluid-gradient');
                 if (micAura) micAura.style.opacity = '0'; 
                 
-                // Show Small Mic & Send Button
                 setTimeout(() => {
                     sendBtn.style.opacity = '1';
                     sendBtn.style.transform = 'scale(1)';
@@ -256,9 +249,7 @@
                     smallMicBtn.style.transform = 'scale(1)';
                     smallMicBtn.style.pointerEvents = 'auto';
                 }, 150);
-                
             } else {
-                // Hide Small Mic & Send Button
                 sendBtn.style.opacity = '0';
                 sendBtn.style.transform = 'scale(0.5)';
                 sendBtn.style.pointerEvents = 'none';
@@ -267,7 +258,6 @@
                 smallMicBtn.style.transform = 'scale(0.5)';
                 smallMicBtn.style.pointerEvents = 'none';
                 
-                // Fly Back to Center
                 setTimeout(() => {
                     micBtn.classList.remove('mic-typing-state');
                     micBtn.classList.add('fluid-gradient');
@@ -276,7 +266,26 @@
             }
         });
 
-        // Auth Modal Logic
+        // Send Button Action connected to Backend API
+        sendBtn.addEventListener('click', async () => {
+            const query = chatInput.value.trim();
+            if(!query) return;
+            
+            sendBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>';
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: query })
+                });
+                const data = await res.json();
+                alert("AI Response: " + JSON.stringify(data));
+            } catch(e) {
+                alert("Connection error with Render backend!");
+            }
+            sendBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: \'FILL\' 1;">send</span>';
+        });
+
         const loginBtn = document.getElementById('login-btn');
         const authModal = document.getElementById('auth-modal');
         const closeModal = document.getElementById('close-modal');
@@ -291,6 +300,13 @@
             if (e.target === authModal) toggleModal();
         });
     });
+
+    // Helper for chip locations
+    async function sendLocationQuery(loc) {
+        const chatInput = document.getElementById('chat-input');
+        chatInput.value = `What is the weather in ${loc}?`;
+        chatInput.dispatchEvent(new Event('input'));
+    }
 </script>
 </body>
 </html>

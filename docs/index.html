@@ -30,76 +30,35 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        
-        /* Splash Screen Animation */
-        #splash {
-            transition: opacity 0.5s ease, visibility 0.5s;
-        }
-        .typewriter h1 {
-            overflow: hidden;
-            border-right: .15em solid #0EA5E9;
-            white-space: nowrap;
-            margin: 0 auto;
-            letter-spacing: .05em;
-            animation: typing 1.33s steps(30, end), blink-caret .75s step-end infinite;
-        }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        #splash { transition: opacity 0.5s ease, visibility 0.5s; }
+        .typewriter h1 { overflow: hidden; border-right: .15em solid #0EA5E9; white-space: nowrap; margin: 0 auto; letter-spacing: .05em; animation: typing 1.33s steps(30, end), blink-caret .75s step-end infinite; }
         @keyframes typing { from { width: 0 } to { width: 100% } }
         @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: #0EA5E9; } }
-
-        /* Figma Style Fluid Gradient */
-        .fluid-gradient {
-            background: linear-gradient(135deg, #3b82f6, #a855f7); 
-            background-size: 200% 200%;
-            animation: fluidGradient 3s ease infinite;
-        }
-        @keyframes fluidGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Mic Flying Animation */
-        .mic-fab {
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .mic-typing-state {
-            transform: translate(80px, 180px) scale(0.1) !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-
-        /* Modal Animation */
-        #auth-modal {
-            transition: opacity 0.3s ease, visibility 0.3s;
-        }
-        #auth-modal > div {
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: scale(0.95);
-        }
-        #auth-modal:not(.hidden) > div {
-            transform: scale(1);
-        }
-
-        /* Scrollbar hiding */
+        .fluid-gradient { background: linear-gradient(135deg, #3b82f6, #a855f7); background-size: 200% 200%; animation: fluidGradient 3s ease infinite; }
+        @keyframes fluidGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .mic-fab { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mic-typing-state { transform: translate(80px, 180px) scale(0.1) !important; opacity: 0 !important; pointer-events: none !important; }
+        #auth-modal { transition: opacity 0.3s ease, visibility 0.3s; }
+        #auth-modal > div { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: scale(0.95); }
+        #auth-modal:not(.hidden) > div { transform: scale(1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .mic-active { animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); } 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); } }
+</style>
+
+<!-- FIREBASE SDKS -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
 </head>
 <body class="bg-background dark:bg-dark-background text-on-surface dark:text-dark-on-surface min-h-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-white transition-colors duration-300 h-screen">
 
 <!-- Splash Screen -->
 <div class="fixed inset-0 z-[100] bg-background dark:bg-dark-background flex items-center justify-center" id="splash">
-    <div class="typewriter inline-block">
-        <h1 class="font-display-lg-mobile md:font-display-lg text-primary dark:text-primary-fixed-dim text-4xl font-bold">anuman.ai</h1>
-    </div>
+    <div class="typewriter inline-block"><h1 class="font-display-lg-mobile md:font-display-lg text-primary dark:text-primary-fixed-dim text-4xl font-bold">anuman.ai</h1></div>
 </div>
 
 <!-- Top App Bar -->
@@ -112,8 +71,9 @@
                 <span class="material-symbols-outlined light-icon">light_mode</span>
             </button>
             <button aria-label="Login" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center gap-2" id="login-btn">
-                <span class="material-symbols-outlined">account_circle</span>
-                <span class="text-sm hidden md:inline font-medium">Guest</span>
+                <img id="user-avatar" src="" alt="avatar" class="w-6 h-6 rounded-full hidden">
+                <span class="material-symbols-outlined" id="guest-icon">account_circle</span>
+                <span class="text-sm hidden md:inline font-medium" id="user-name-display">Guest</span>
             </button>
         </div>
     </div>
@@ -121,18 +81,9 @@
 
 <!-- Main Chat Canvas -->
 <main class="flex-1 flex flex-col relative w-full h-full justify-center items-center">
-    
-    <!-- Chat Messages Container (Initially Hidden) -->
-    <div id="chat-messages" class="absolute top-[70px] bottom-0 left-0 right-0 overflow-y-auto hidden flex-col gap-5 p-4 pb-48 w-full max-w-3xl mx-auto z-10 scroll-smooth hide-scrollbar">
-        <!-- Messages will be injected here -->
-    </div>
-
-    <!-- Big Center Mic -->
+    <div id="chat-messages" class="absolute top-[70px] bottom-0 left-0 right-0 overflow-y-auto hidden flex-col gap-5 p-4 pb-48 w-full max-w-3xl mx-auto z-10 scroll-smooth hide-scrollbar"></div>
     <div class="relative flex justify-center items-center z-20 transition-all duration-500" id="mic-container">
-        <!-- The Subtle Glow Aura -->
         <div id="mic-aura" class="absolute w-36 h-36 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur-[25px] opacity-30 dark:opacity-40 transition-opacity duration-300"></div>
-        
-        <!-- The Perfect Circle Mic -->
         <button id="mic-btn" class="mic-fab fluid-gradient relative w-28 h-28 rounded-full text-white shadow-2xl hover:scale-105 active:scale-95 flex items-center justify-center transition-all duration-500">
             <span class="material-symbols-outlined text-[42px]" id="mic-icon">mic</span>
         </button>
@@ -142,99 +93,70 @@
 <!-- Bottom Input Area -->
 <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background dark:from-dark-background via-background/90 dark:via-dark-background/90 to-transparent pt-8 pb-4 px-4 z-40">
     <div class="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 relative">
-        
-        <!-- Suggestion Chips 2x2 Grid -->
         <div id="suggestion-chips" class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs transition-opacity duration-300" style="animation: fadeInUp 0.5s ease 2s forwards;">
-            <button onclick="sendLocationQuery('Inavalu')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Inavalu
-            </button>
-            <button onclick="sendLocationQuery('VIT-AP')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> VIT-AP
-            </button>
-            <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada
-            </button>
-            <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur
-            </button>
+            <button onclick="sendLocationQuery('Inavalu')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Inavalu</button>
+            <button onclick="sendLocationQuery('VIT-AP')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> VIT-AP</button>
+            <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada</button>
+            <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur</button>
         </div>
-        
-        <!-- Input Box -->
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
             <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-24 py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
-            
-            <!-- Action Buttons Container -->
             <div class="absolute right-2 flex items-center gap-1">
-                <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none">
-                    <span class="material-symbols-outlined text-[24px]">mic</span>
-                </button>
-
-                <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none">
-                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
-                </button>
+                <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none"><span class="material-symbols-outlined text-[24px]">mic</span></button>
+                <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none"><span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span></button>
             </div>
         </div>
-        
-        <!-- Disclaimer -->
-        <div class="text-center mt-1">
-            <p class="text-[11px] text-gray-500">Anuman.ai can make mistakes. Consider verifying important information.</p>
-        </div>
+        <div class="text-center mt-1"><p class="text-[11px] text-gray-500">Anuman.ai can make mistakes. Consider verifying important information.</p></div>
     </div>
 </div>
 
 <!-- Auth Modal -->
 <div class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4" id="auth-modal">
     <div class="bg-surface dark:bg-[#111] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800 relative">
-        <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" id="close-modal">
-            <span class="material-symbols-outlined">close</span>
-        </button>
+        <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" id="close-modal"><span class="material-symbols-outlined">close</span></button>
         <div class="p-8 pb-4 text-center border-b border-gray-100 dark:border-gray-800">
             <h2 class="text-2xl font-bold text-primary dark:text-primary-fixed-dim">Welcome to Anuman</h2>
             <p class="text-gray-500 mt-2 text-sm">Sign in to save locations and access personalized forecasts.</p>
         </div>
         <div class="p-8 flex flex-col gap-4">
-            <button class="w-full py-3 px-4 flex items-center justify-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium">
+            <button id="google-sign-in-btn" class="w-full py-3 px-4 flex items-center justify-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path></svg>
                 Continue with Google
             </button>
-            <div class="relative flex items-center py-2">
-                <div class="flex-grow border-t border-gray-200 dark:border-gray-800"></div>
-                <span class="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase tracking-wider">or</span>
-                <div class="flex-grow border-t border-gray-200 dark:border-gray-800"></div>
-            </div>
-            <input class="w-full bg-transparent border border-gray-300 dark:border-gray-700 focus:ring-1 focus:ring-primary-container rounded-xl px-4 py-3" placeholder="Email address" type="email">
-            <button class="w-full bg-primary-container text-white text-base rounded-xl py-3 hover:bg-primary transition-colors font-semibold shadow-md shadow-primary-container/20">Continue with Email</button>
         </div>
     </div>
 </div>
 
 <script>
+    // --- FIREBASE CONFIGURATION (REPLACE WITH YOUR KEYS FROM FIREBASE CONSOLE) ---
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
     const API_BASE = "https://anuman-ai.onrender.com";
-    let isChatActive = false; // Tracks if a conversation has started
+    let isChatActive = false; 
+    let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7); // Default guest ID
 
     document.addEventListener('DOMContentLoaded', () => {
         const splash = document.getElementById('splash');
-        setTimeout(() => {
-            splash.style.opacity = '0';
-            splash.style.visibility = 'hidden';
-        }, 3000); 
+        setTimeout(() => { splash.style.opacity = '0'; splash.style.visibility = 'hidden'; }, 3000); 
 
-        // Theme Toggle
         const themeToggleBtn = document.getElementById('theme-toggle');
         const html = document.documentElement;
-        
         themeToggleBtn.addEventListener('click', () => {
             html.classList.toggle('dark');
-            const darkIcon = themeToggleBtn.querySelector('.dark-icon');
-            const lightIcon = themeToggleBtn.querySelector('.light-icon');
-            
-            if (html.classList.contains('dark')) {
-                darkIcon.classList.add('hidden');
-                lightIcon.classList.remove('hidden');
-            } else {
-                lightIcon.classList.add('hidden');
-                darkIcon.classList.remove('hidden');
-            }
+            themeToggleBtn.querySelector('.dark-icon').classList.toggle('hidden');
+            themeToggleBtn.querySelector('.light-icon').classList.toggle('hidden');
         });
 
         const chatInput = document.getElementById('chat-input');
@@ -246,7 +168,82 @@
         const chatMessages = document.getElementById('chat-messages');
         const suggestionChips = document.getElementById('suggestion-chips');
 
-        // UI Input Listener
+        // --- FIREBASE AUTH LOGIC ---
+        const authModal = document.getElementById('auth-modal');
+        function toggleModal() { authModal.classList.toggle('hidden'); }
+        document.getElementById('login-btn').addEventListener('click', () => {
+            if(auth.currentUser) { auth.signOut(); } else { toggleModal(); }
+        });
+        document.getElementById('close-modal').addEventListener('click', toggleModal);
+        
+        document.getElementById('google-sign-in-btn').addEventListener('click', () => {
+            auth.signInWithPopup(provider).then((result) => {
+                toggleModal();
+            }).catch((error) => alert("Login Failed: " + error.message));
+        });
+
+        // Listen for Login/Logout state changes
+        auth.onAuthStateChanged((user) => {
+            const nameDisplay = document.getElementById('user-name-display');
+            const guestIcon = document.getElementById('guest-icon');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (user) {
+                currentUserSessionId = user.uid; // Set session to User's exact DB ID
+                nameDisplay.innerText = user.displayName.split(" ")[0]; // First name
+                guestIcon.classList.add('hidden');
+                userAvatar.src = user.photoURL;
+                userAvatar.classList.remove('hidden');
+            } else {
+                currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
+                nameDisplay.innerText = "Guest";
+                guestIcon.classList.remove('hidden');
+                userAvatar.classList.add('hidden');
+            }
+        });
+
+        // --- SPEECH RECOGNITION LOGIC ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-IN'; 
+
+            const handleMicClick = (e) => {
+                e.preventDefault();
+                recognition.start();
+                chatInput.placeholder = "Listening...";
+                micBtn.classList.add('mic-active');
+                smallMicBtn.classList.add('text-primary');
+            };
+
+            micBtn.addEventListener('click', handleMicClick);
+            smallMicBtn.addEventListener('click', handleMicClick);
+
+            recognition.onresult = (event) => {
+                chatInput.value = event.results[0][0].transcript;
+                chatInput.dispatchEvent(new Event('input')); 
+                resetMicUI();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech error:", event.error);
+                resetMicUI("Try typing instead...");
+            };
+
+            recognition.onend = () => resetMicUI();
+
+            function resetMicUI(placeholder = "Ask Anuman about the weather...") {
+                chatInput.placeholder = placeholder;
+                micBtn.classList.remove('mic-active');
+                smallMicBtn.classList.remove('text-primary');
+            }
+        } else {
+            smallMicBtn.style.display = 'none';
+        }
+
+        // --- UI INPUT & CHAT LOGIC ---
         chatInput.addEventListener('input', (e) => {
             if (e.target.value.trim().length > 0) {
                 if (!isChatActive) {
@@ -254,25 +251,13 @@
                     micBtn.classList.remove('fluid-gradient');
                     if (micAura) micAura.style.opacity = '0'; 
                 }
-                
                 setTimeout(() => {
-                    sendBtn.style.opacity = '1';
-                    sendBtn.style.transform = 'scale(1)';
-                    sendBtn.style.pointerEvents = 'auto';
-
-                    smallMicBtn.style.opacity = '1';
-                    smallMicBtn.style.transform = 'scale(1)';
-                    smallMicBtn.style.pointerEvents = 'auto';
+                    sendBtn.style.opacity = '1'; sendBtn.style.transform = 'scale(1)'; sendBtn.style.pointerEvents = 'auto';
+                    smallMicBtn.style.opacity = '1'; smallMicBtn.style.transform = 'scale(1)'; smallMicBtn.style.pointerEvents = 'auto';
                 }, 150);
             } else {
-                sendBtn.style.opacity = '0';
-                sendBtn.style.transform = 'scale(0.5)';
-                sendBtn.style.pointerEvents = 'none';
-
-                smallMicBtn.style.opacity = '0';
-                smallMicBtn.style.transform = 'scale(0.5)';
-                smallMicBtn.style.pointerEvents = 'none';
-                
+                sendBtn.style.opacity = '0'; sendBtn.style.transform = 'scale(0.5)'; sendBtn.style.pointerEvents = 'none';
+                smallMicBtn.style.opacity = '0'; smallMicBtn.style.transform = 'scale(0.5)'; smallMicBtn.style.pointerEvents = 'none';
                 setTimeout(() => {
                     if (!isChatActive) {
                         micBtn.classList.remove('mic-typing-state');
@@ -283,7 +268,6 @@
             }
         });
 
-        // Add Message to Chat UI
         function appendMessage(role, text) {
             if (!isChatActive) {
                 isChatActive = true;
@@ -292,109 +276,50 @@
                 chatMessages.classList.remove('hidden');
                 chatMessages.classList.add('flex');
             }
-
-            // Simple Markdown parser (Bold and Line breaks)
-            const formattedText = text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\n/g, '<br>');
-
+            const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
             const msgDiv = document.createElement('div');
             msgDiv.className = `flex w-full ${role === 'user' ? 'justify-end' : 'justify-start'}`;
             msgDiv.style.animation = 'fadeInUp 0.4s ease forwards';
-            
-            msgDiv.innerHTML = `
-                <div class="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${
-                    role === 'user' 
-                    ? 'bg-primary-container text-white rounded-br-sm' 
-                    : 'bg-surface dark:bg-dark-surface border border-gray-200 dark:border-gray-800 text-on-surface dark:text-dark-on-surface rounded-bl-sm'
-                }">
-                    <p class="text-[15px] leading-relaxed font-medium">${formattedText}</p>
-                </div>
-            `;
-            
+            msgDiv.innerHTML = `<div class="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${role === 'user' ? 'bg-primary-container text-white rounded-br-sm' : 'bg-surface dark:bg-dark-surface border border-gray-200 dark:border-gray-800 text-on-surface dark:text-dark-on-surface rounded-bl-sm'}"><p class="text-[15px] leading-relaxed font-medium">${formattedText}</p></div>`;
             chatMessages.appendChild(msgDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Send Button Action connected to Backend API
         sendBtn.addEventListener('click', async () => {
             const query = chatInput.value.trim();
             if(!query) return;
-            
-            // Show User message immediately
             appendMessage('user', query);
+            chatInput.value = ''; chatInput.dispatchEvent(new Event('input')); 
             
-            // Clear input
-            chatInput.value = '';
-            chatInput.dispatchEvent(new Event('input')); // Hide buttons
-            
-            // Show loading spinner in Send button
             sendBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>';
-            sendBtn.style.opacity = '1';
-            sendBtn.style.transform = 'scale(1)';
-            sendBtn.style.pointerEvents = 'none';
+            sendBtn.style.opacity = '1'; sendBtn.style.transform = 'scale(1)'; sendBtn.style.pointerEvents = 'none';
 
             try {
                 const res = await fetch(`${API_BASE}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        message: query,
-                        session_id: "session_123" 
-                    })
+                        message: query, 
+                        session_id: currentUserSessionId // Bheje user ka actual ID!
+                    }) 
                 });
                 const data = await res.json();
-                
-                // Show AI Response
-                if (data.reply) {
-                    appendMessage('ai', data.reply);
-                } else {
-                    appendMessage('ai', "Sorry, I received an invalid response format.");
-                }
-            } catch(e) {
-                appendMessage('ai', "Connection error: Unable to reach the weather server right now.");
-            }
+                if (data.reply) appendMessage('ai', data.reply);
+                else appendMessage('ai', "Sorry, I received an invalid response format.");
+            } catch(e) { appendMessage('ai', "Connection error: Unable to reach the weather server right now."); }
             
-            // Restore Send button icon
             sendBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: \'FILL\' 1;">send</span>';
-            chatInput.dispatchEvent(new Event('input')); // Reset visibility
+            chatInput.dispatchEvent(new Event('input')); 
         });
 
-        // Allow sending with Enter key
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendBtn.click();
-            }
-        });
-
-        // Auth Modal Logic
-        const loginBtn = document.getElementById('login-btn');
-        const authModal = document.getElementById('auth-modal');
-        const closeModal = document.getElementById('close-modal');
-
-        function toggleModal() {
-            authModal.classList.toggle('hidden');
-        }
-
-        loginBtn.addEventListener('click', toggleModal);
-        closeModal.addEventListener('click', toggleModal);
-        authModal.addEventListener('click', (e) => {
-            if (e.target === authModal) toggleModal();
-        });
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendBtn.click(); } });
     });
 
-    // Helper for chip locations
     async function sendLocationQuery(loc) {
         const chatInput = document.getElementById('chat-input');
         chatInput.value = `What is the weather in ${loc}?`;
         chatInput.dispatchEvent(new Event('input'));
-        
-        // Slight delay to allow UI to catch up, then click send
-        setTimeout(() => {
-            document.getElementById('send-btn').click();
-        }, 100);
+        setTimeout(() => { document.getElementById('send-btn').click(); }, 100);
     }
 </script>
 </body>

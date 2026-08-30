@@ -99,11 +99,20 @@
             <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada</button>
             <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur</button>
         </div>
+        
+        <!-- Updated Input Box - Small mic is now always visible -->
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
-            <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-24 py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
+            <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-[90px] py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
+            
             <div class="absolute right-2 flex items-center gap-1">
-                <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none"><span class="material-symbols-outlined text-[24px]">mic</span></button>
-                <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none"><span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span></button>
+                <!-- Chota Mic - Always Visible -->
+                <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300">
+                    <span class="material-symbols-outlined text-[24px]">mic</span>
+                </button>
+                <!-- Send Button - Only shows when typing -->
+                <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 absolute right-0 pointer-events-none">
+                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
+                </button>
             </div>
         </div>
         <div class="text-center mt-1"><p class="text-[11px] text-gray-500">Anuman.ai can make mistakes. Consider verifying important information.</p></div>
@@ -128,24 +137,32 @@
 </div>
 
 <script>
-    // --- FIREBASE CONFIGURATION (REPLACE WITH YOUR KEYS FROM FIREBASE CONSOLE) ---
+    // =========================================================================
+    // 🚨 FIREBASE CONFIGURATION - BINA YEH DALE LOGIN NAHI HOGA! 🚨
+    // Apne Firebase Console > Project Settings > Web Apps se config copy kar yaha paste kar:
+    // =========================================================================
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        apiKey: "AIzaSyBvX82oA8k2Pfz4Wp3ttBuvVppchkDlmZ0",
+        authDomain: "anumanai.firebaseapp.com",
+        projectId: "anumanai",
+        storageBucket: "anumanai.firebasestorage.app",
+        messagingSenderId: "803079945249",
+        appId: "1:803079945249:web:4d28dfd9bf3a0af66ef760"
     };
     
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
+    // Initialize Firebase ONLY if config is changed from defaults
+    let auth, provider;
+    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        provider = new firebase.auth.GoogleAuthProvider();
+    } else {
+        console.warn("Please add your Firebase keys to make login work!");
+    }
 
     const API_BASE = "https://anuman-ai.onrender.com";
     let isChatActive = false; 
-    let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7); // Default guest ID
+    let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
 
     document.addEventListener('DOMContentLoaded', () => {
         const splash = document.getElementById('splash');
@@ -171,39 +188,47 @@
         // --- FIREBASE AUTH LOGIC ---
         const authModal = document.getElementById('auth-modal');
         function toggleModal() { authModal.classList.toggle('hidden'); }
+        
         document.getElementById('login-btn').addEventListener('click', () => {
-            if(auth.currentUser) { auth.signOut(); } else { toggleModal(); }
+            if(auth && auth.currentUser) { auth.signOut(); } else { toggleModal(); }
         });
         document.getElementById('close-modal').addEventListener('click', toggleModal);
         
         document.getElementById('google-sign-in-btn').addEventListener('click', () => {
+            if (!auth) {
+                alert("Please put your Firebase API Keys in index.html first!");
+                return;
+            }
             auth.signInWithPopup(provider).then((result) => {
                 toggleModal();
             }).catch((error) => alert("Login Failed: " + error.message));
         });
 
-        // Listen for Login/Logout state changes
-        auth.onAuthStateChanged((user) => {
-            const nameDisplay = document.getElementById('user-name-display');
-            const guestIcon = document.getElementById('guest-icon');
-            const userAvatar = document.getElementById('user-avatar');
-            
-            if (user) {
-                currentUserSessionId = user.uid; // Set session to User's exact DB ID
-                nameDisplay.innerText = user.displayName.split(" ")[0]; // First name
-                guestIcon.classList.add('hidden');
-                userAvatar.src = user.photoURL;
-                userAvatar.classList.remove('hidden');
-            } else {
-                currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
-                nameDisplay.innerText = "Guest";
-                guestIcon.classList.remove('hidden');
-                userAvatar.classList.add('hidden');
-            }
-        });
+        if (auth) {
+            auth.onAuthStateChanged((user) => {
+                const nameDisplay = document.getElementById('user-name-display');
+                const guestIcon = document.getElementById('guest-icon');
+                const userAvatar = document.getElementById('user-avatar');
+                
+                if (user) {
+                    currentUserSessionId = user.uid; 
+                    nameDisplay.innerText = user.displayName.split(" ")[0]; 
+                    guestIcon.classList.add('hidden');
+                    userAvatar.src = user.photoURL;
+                    userAvatar.classList.remove('hidden');
+                } else {
+                    currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
+                    nameDisplay.innerText = "Guest";
+                    guestIcon.classList.remove('hidden');
+                    userAvatar.classList.add('hidden');
+                }
+            });
+        }
 
         // --- SPEECH RECOGNITION LOGIC ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let isListening = false;
+
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.continuous = false;
@@ -212,10 +237,21 @@
 
             const handleMicClick = (e) => {
                 e.preventDefault();
-                recognition.start();
-                chatInput.placeholder = "Listening...";
-                micBtn.classList.add('mic-active');
-                smallMicBtn.classList.add('text-primary');
+                if (isListening) {
+                    recognition.stop();
+                    return;
+                }
+                
+                try {
+                    recognition.start();
+                    isListening = true;
+                    chatInput.placeholder = "Listening...";
+                    micBtn.classList.add('mic-active');
+                    smallMicBtn.classList.add('text-primary');
+                    smallMicBtn.classList.add('animate-pulse');
+                } catch(err) {
+                    console.log("Mic is already starting...", err);
+                }
             };
 
             micBtn.addEventListener('click', handleMicClick);
@@ -232,12 +268,17 @@
                 resetMicUI("Try typing instead...");
             };
 
-            recognition.onend = () => resetMicUI();
+            recognition.onend = () => {
+                isListening = false;
+                resetMicUI();
+            };
 
             function resetMicUI(placeholder = "Ask Anuman about the weather...") {
+                isListening = false;
                 chatInput.placeholder = placeholder;
                 micBtn.classList.remove('mic-active');
                 smallMicBtn.classList.remove('text-primary');
+                smallMicBtn.classList.remove('animate-pulse');
             }
         } else {
             smallMicBtn.style.display = 'none';
@@ -253,11 +294,14 @@
                 }
                 setTimeout(() => {
                     sendBtn.style.opacity = '1'; sendBtn.style.transform = 'scale(1)'; sendBtn.style.pointerEvents = 'auto';
-                    smallMicBtn.style.opacity = '1'; smallMicBtn.style.transform = 'scale(1)'; smallMicBtn.style.pointerEvents = 'auto';
+                    // Hide small mic when send button is active so they don't overlap
+                    smallMicBtn.style.opacity = '0'; smallMicBtn.style.pointerEvents = 'none';
                 }, 150);
             } else {
                 sendBtn.style.opacity = '0'; sendBtn.style.transform = 'scale(0.5)'; sendBtn.style.pointerEvents = 'none';
-                smallMicBtn.style.opacity = '0'; smallMicBtn.style.transform = 'scale(0.5)'; smallMicBtn.style.pointerEvents = 'none';
+                // Bring back small mic
+                smallMicBtn.style.opacity = '1'; smallMicBtn.style.pointerEvents = 'auto';
+                
                 setTimeout(() => {
                     if (!isChatActive) {
                         micBtn.classList.remove('mic-typing-state');

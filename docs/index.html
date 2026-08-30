@@ -95,17 +95,13 @@
             <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur</button>
         </div>
         
-        <!-- Updated Input Box - Small mic is PERMANENT -->
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
-            <!-- Increased right padding to accommodate both buttons -->
             <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-[90px] py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
             
             <div class="absolute right-2 flex items-center gap-1">
-                <!-- Chota Mic - Always Visible & Fixed -->
                 <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300">
                     <span class="material-symbols-outlined text-[24px]">mic</span>
                 </button>
-                <!-- Send Button - Appears next to mic when typing -->
                 <button id="send-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-white bg-primary-container hover:bg-primary transition-all duration-300 opacity-0 scale-50 pointer-events-none hidden">
                     <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
                 </button>
@@ -137,6 +133,7 @@
     const API_BASE = "https://anuman-ai.onrender.com";
     let isChatActive = false; 
     let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
+    let wasLastInputVoice = false; // <--- Naya flag voice trigger check karne ke liye
 
     document.addEventListener('DOMContentLoaded', () => {
         const splash = document.getElementById('splash');
@@ -175,7 +172,6 @@
         document.getElementById('login-btn').addEventListener('click', toggleModal);
         document.getElementById('close-modal').addEventListener('click', toggleModal);
         
-        // Load existing session if any
         function loadSession() {
             const savedName = localStorage.getItem('anuman_name');
             const savedSession = localStorage.getItem('anuman_session_id');
@@ -206,14 +202,11 @@
                 alert("Please fill name and email.");
                 return;
             }
-            // Generate a persistent session ID based on email if not exists
             const newSessionId = "user_" + btoa(emailInput.value).replace(/=/g, '').substring(0, 15);
-            
             localStorage.setItem('anuman_name', nameInput.value);
             localStorage.setItem('anuman_email', emailInput.value);
             localStorage.setItem('anuman_age', ageInput.value);
             localStorage.setItem('anuman_session_id', newSessionId);
-            
             loadSession();
             toggleModal();
         });
@@ -260,6 +253,7 @@
 
             recognition.onresult = (event) => {
                 chatInput.value = event.results[0][0].transcript;
+                wasLastInputVoice = true; // <--- Set flag ki input voice se aaya hai
                 chatInput.dispatchEvent(new Event('input')); 
                 resetMicUI();
             };
@@ -286,6 +280,12 @@
         }
 
         // --- UI INPUT & CHAT LOGIC ---
+        
+        // Agar keyboard se type kiya, toh voice trigger off kardo
+        chatInput.addEventListener('keydown', () => {
+            wasLastInputVoice = false;
+        });
+
         chatInput.addEventListener('input', (e) => {
             if (e.target.value.trim().length > 0) {
                 if (!isChatActive) {
@@ -298,7 +298,6 @@
                     sendBtn.style.opacity = '1'; 
                     sendBtn.style.transform = 'scale(1)'; 
                     sendBtn.style.pointerEvents = 'auto';
-                    // We DO NOT hide smallMicBtn anymore!
                 }, 150);
             } else {
                 sendBtn.style.opacity = '0'; 
@@ -337,9 +336,14 @@
             const query = chatInput.value.trim();
             if(!query) return;
             appendMessage('user', query);
-            chatInput.value = ''; chatInput.dispatchEvent(new Event('input')); 
             
-            // Re-show send button temporarily to display spinner
+            // Backup flag value before clearing input
+            const isVoiceQuery = wasLastInputVoice;
+            
+            chatInput.value = ''; 
+            chatInput.dispatchEvent(new Event('input')); 
+            wasLastInputVoice = false; // Reset for next message
+            
             sendBtn.classList.remove('hidden');
             sendBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>';
             sendBtn.style.opacity = '1'; sendBtn.style.transform = 'scale(1)'; sendBtn.style.pointerEvents = 'none';
@@ -350,16 +354,30 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         message: query, 
-                        session_id: currentUserSessionId // Custom session ID bheja
+                        session_id: currentUserSessionId,
+                        is_voice: isVoiceQuery // <--- Backend ko bhej diya
                     }) 
                 });
                 const data = await res.json();
-                if (data.reply) appendMessage('ai', data.reply);
-                else appendMessage('ai', "Sorry, I received an invalid response format.");
+                if (data.reply) {
+                    appendMessage('ai', data.reply);
+                    
+                    // Agar backend ne audio bheja, toh usko turant play karo
+                    if (data.audio_base64) {
+                        try {
+                            const audio = new Audio("data:audio/wav;base64," + data.audio_base64);
+                            audio.play();
+                        } catch(err) {
+                            console.error("Audio playback failed", err);
+                        }
+                    }
+                } else {
+                    appendMessage('ai', "Sorry, I received an invalid response format.");
+                }
             } catch(e) { appendMessage('ai', "Connection error: Server is waking up, please wait a minute and try again."); }
             
             sendBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: \'FILL\' 1;">send</span>';
-            chatInput.dispatchEvent(new Event('input')); // Re-evaluates hiding send button
+            chatInput.dispatchEvent(new Event('input')); 
         });
 
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendBtn.click(); } });
@@ -368,6 +386,7 @@
     async function sendLocationQuery(loc) {
         const chatInput = document.getElementById('chat-input');
         chatInput.value = `What is the weather in ${loc}?`;
+        wasLastInputVoice = false; // Chip pe click karna is not voice
         chatInput.dispatchEvent(new Event('input'));
         setTimeout(() => { document.getElementById('send-btn').click(); }, 100);
     }

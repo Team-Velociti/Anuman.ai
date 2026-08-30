@@ -1,12 +1,14 @@
 import os
 import uvicorn
+import base64
+import re
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
 from app.llm_agent import process_gemini_chat
-from app.voice_router import process_sarvam_audio
+from app.voice_router import process_sarvam_audio, text_to_speech
 from app.weather import fetch_open_meteo_data
 from app.database import save_chat_to_db, get_chat_history
 
@@ -24,24 +26,37 @@ class ChatPayload(BaseModel):
     session_id: str
     message: str
     location_key: Optional[str] = None
+    is_voice: Optional[bool] = False  # <--- Naya flag add kiya TTS trigger karne ke liye
 
 @app.post("/api/chat", tags=["Chat"])
 async def handle_chat(payload: ChatPayload):
     try:
+        # 1. Get Text Reply from Gemini
         ai_response_text = await process_gemini_chat(
             session_id=payload.session_id,
             user_message=payload.message,
             location_key=payload.location_key
         )
         
+        # 2. Save and Fetch History
         await save_chat_to_db(payload.session_id, payload.message, ai_response_text)
         updated_history = await get_chat_history(payload.session_id)
+        
+        # 3. Handle Text-To-Speech if user used Voice
+        audio_base64 = None
+        if payload.is_voice:
+            # Markdown chars (**, *) hatao warna TTS usko ajeeb tarah padhega
+            clean_text = re.sub(r'\*+', '', ai_response_text)
+            audio_bytes = await text_to_speech(clean_text)
+            if audio_bytes:
+                audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
         
         return {
             "status": "success",
             "session_id": payload.session_id,
             "reply": ai_response_text,
-            "chat_history": updated_history
+            "chat_history": updated_history,
+            "audio_base64": audio_base64  # <--- Frontend ko audio bhej rahe hain
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat routing failed: {str(e)}")

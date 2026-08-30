@@ -26,7 +26,7 @@
       }
     }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -83,12 +83,12 @@
             transform: scale(1);
         }
 
-        /* Scrollbar hiding for chips */
+        /* Scrollbar hiding */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
@@ -98,12 +98,12 @@
 <!-- Splash Screen -->
 <div class="fixed inset-0 z-[100] bg-background dark:bg-dark-background flex items-center justify-center" id="splash">
     <div class="typewriter inline-block">
-        <h1 class="font-display-lg-mobile md:font-display-lg text-primary dark:text-primary-fixed-dim text-4xl">anuman.ai</h1>
+        <h1 class="font-display-lg-mobile md:font-display-lg text-primary dark:text-primary-fixed-dim text-4xl font-bold">anuman.ai</h1>
     </div>
 </div>
 
 <!-- Top App Bar -->
-<header class="fixed top-0 w-full z-50 bg-background dark:bg-dark-background border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
+<header class="fixed top-0 w-full z-50 bg-background/80 dark:bg-dark-background/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
     <div class="flex justify-between items-center px-4 py-4 w-full max-w-3xl mx-auto h-16">
         <div class="font-bold text-primary text-2xl tracking-tight">anuman.ai</div>
         <div class="flex items-center gap-4">
@@ -119,9 +119,16 @@
     </div>
 </header>
 
-<!-- Main Chat Canvas (Figma Style Mic) -->
+<!-- Main Chat Canvas -->
 <main class="flex-1 flex flex-col relative w-full h-full justify-center items-center">
-    <div class="relative flex justify-center items-center z-50">
+    
+    <!-- Chat Messages Container (Initially Hidden) -->
+    <div id="chat-messages" class="absolute top-[70px] bottom-0 left-0 right-0 overflow-y-auto hidden flex-col gap-5 p-4 pb-48 w-full max-w-3xl mx-auto z-10 scroll-smooth hide-scrollbar">
+        <!-- Messages will be injected here -->
+    </div>
+
+    <!-- Big Center Mic -->
+    <div class="relative flex justify-center items-center z-20 transition-all duration-500" id="mic-container">
         <!-- The Subtle Glow Aura -->
         <div id="mic-aura" class="absolute w-36 h-36 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur-[25px] opacity-30 dark:opacity-40 transition-opacity duration-300"></div>
         
@@ -137,7 +144,7 @@
     <div class="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 relative">
         
         <!-- Suggestion Chips 2x2 Grid -->
-        <div class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs" style="animation: fadeInUp 0.5s ease 2s forwards;">
+        <div id="suggestion-chips" class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs transition-opacity duration-300" style="animation: fadeInUp 0.5s ease 2s forwards;">
             <button onclick="sendLocationQuery('Inavalu')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Inavalu
             </button>
@@ -203,6 +210,7 @@
 
 <script>
     const API_BASE = "https://anuman-ai.onrender.com";
+    let isChatActive = false; // Tracks if a conversation has started
 
     document.addEventListener('DOMContentLoaded', () => {
         const splash = document.getElementById('splash');
@@ -211,6 +219,7 @@
             splash.style.visibility = 'hidden';
         }, 3000); 
 
+        // Theme Toggle
         const themeToggleBtn = document.getElementById('theme-toggle');
         const html = document.documentElement;
         
@@ -231,14 +240,20 @@
         const chatInput = document.getElementById('chat-input');
         const micBtn = document.getElementById('mic-btn');
         const micAura = document.getElementById('mic-aura'); 
+        const micContainer = document.getElementById('mic-container');
         const sendBtn = document.getElementById('send-btn');
         const smallMicBtn = document.getElementById('small-mic-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const suggestionChips = document.getElementById('suggestion-chips');
 
+        // UI Input Listener
         chatInput.addEventListener('input', (e) => {
             if (e.target.value.trim().length > 0) {
-                micBtn.classList.add('mic-typing-state');
-                micBtn.classList.remove('fluid-gradient');
-                if (micAura) micAura.style.opacity = '0'; 
+                if (!isChatActive) {
+                    micBtn.classList.add('mic-typing-state');
+                    micBtn.classList.remove('fluid-gradient');
+                    if (micAura) micAura.style.opacity = '0'; 
+                }
                 
                 setTimeout(() => {
                     sendBtn.style.opacity = '1';
@@ -259,36 +274,102 @@
                 smallMicBtn.style.pointerEvents = 'none';
                 
                 setTimeout(() => {
-                    micBtn.classList.remove('mic-typing-state');
-                    micBtn.classList.add('fluid-gradient');
-                    if (micAura) micAura.style.opacity = '0.3'; 
+                    if (!isChatActive) {
+                        micBtn.classList.remove('mic-typing-state');
+                        micBtn.classList.add('fluid-gradient');
+                        if (micAura) micAura.style.opacity = '0.3'; 
+                    }
                 }, 150);
             }
         });
+
+        // Add Message to Chat UI
+        function appendMessage(role, text) {
+            if (!isChatActive) {
+                isChatActive = true;
+                micContainer.style.display = 'none';
+                suggestionChips.style.display = 'none';
+                chatMessages.classList.remove('hidden');
+                chatMessages.classList.add('flex');
+            }
+
+            // Simple Markdown parser (Bold and Line breaks)
+            const formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex w-full ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            msgDiv.style.animation = 'fadeInUp 0.4s ease forwards';
+            
+            msgDiv.innerHTML = `
+                <div class="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${
+                    role === 'user' 
+                    ? 'bg-primary-container text-white rounded-br-sm' 
+                    : 'bg-surface dark:bg-dark-surface border border-gray-200 dark:border-gray-800 text-on-surface dark:text-dark-on-surface rounded-bl-sm'
+                }">
+                    <p class="text-[15px] leading-relaxed font-medium">${formattedText}</p>
+                </div>
+            `;
+            
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
 
         // Send Button Action connected to Backend API
         sendBtn.addEventListener('click', async () => {
             const query = chatInput.value.trim();
             if(!query) return;
             
+            // Show User message immediately
+            appendMessage('user', query);
+            
+            // Clear input
+            chatInput.value = '';
+            chatInput.dispatchEvent(new Event('input')); // Hide buttons
+            
+            // Show loading spinner in Send button
             sendBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>';
+            sendBtn.style.opacity = '1';
+            sendBtn.style.transform = 'scale(1)';
+            sendBtn.style.pointerEvents = 'none';
+
             try {
                 const res = await fetch(`${API_BASE}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         message: query,
-                        session_id: "session_123" // <--- YEH LINE MISSING HAI TERE CODE MEIN
+                        session_id: "session_123" 
                     })
                 });
                 const data = await res.json();
-                alert("AI Response: " + JSON.stringify(data));
+                
+                // Show AI Response
+                if (data.reply) {
+                    appendMessage('ai', data.reply);
+                } else {
+                    appendMessage('ai', "Sorry, I received an invalid response format.");
+                }
             } catch(e) {
-                alert("Connection error with Render backend!");
+                appendMessage('ai', "Connection error: Unable to reach the weather server right now.");
             }
+            
+            // Restore Send button icon
             sendBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: \'FILL\' 1;">send</span>';
+            chatInput.dispatchEvent(new Event('input')); // Reset visibility
         });
 
+        // Allow sending with Enter key
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendBtn.click();
+            }
+        });
+
+        // Auth Modal Logic
         const loginBtn = document.getElementById('login-btn');
         const authModal = document.getElementById('auth-modal');
         const closeModal = document.getElementById('close-modal');
@@ -309,6 +390,11 @@
         const chatInput = document.getElementById('chat-input');
         chatInput.value = `What is the weather in ${loc}?`;
         chatInput.dispatchEvent(new Event('input'));
+        
+        // Slight delay to allow UI to catch up, then click send
+        setTimeout(() => {
+            document.getElementById('send-btn').click();
+        }, 100);
     }
 </script>
 </body>

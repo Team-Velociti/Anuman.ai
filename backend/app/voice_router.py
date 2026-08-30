@@ -38,8 +38,9 @@ async def text_to_speech(text: str) -> str:
         print("[WARNING] SARVAM_API_KEY missing. Cannot use TTS.")
         return None
 
-    # AI ke response mein se markdown (** bold, * bullet) hatao warna TTS usko bhi padhega
-    clean_text = re.sub(r'\*+', '', text)
+    # AI response se emojis aur markdown characters (**, *, #, ~) hatao, sirf text/punctuation rakho
+    clean_text = re.sub(r'[^\w\s.,!?\'"-]', '', text)
+    clean_text = clean_text.replace('_', '')
 
     url = "https://api.sarvam.ai/text-to-speech"
     headers = {

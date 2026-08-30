@@ -61,6 +61,14 @@ async def handle_chat(payload: ChatPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat routing failed: {str(e)}")
 
+@app.get("/api/history/{session_id}", tags=["History"])
+async def api_get_history(session_id: str):
+    try:
+        history = await get_chat_history(session_id)
+        return {"status": "success", "session_id": session_id, "history": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch history: {str(e)}")
+
 @app.post("/api/voice", tags=["Voice"])
 async def handle_voice(session_id: str = Form(...), file: UploadFile = File(...)):
     try:

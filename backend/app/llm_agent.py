@@ -45,32 +45,43 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
         chat = model.start_chat(history=past_history if past_history else [])
         response = await chat.send_message_async(user_message)
 
-        # Naye SDK ke liye function call check karne ka tareeqa
+        # Robustly extract function call
         fc = None
-        if response.candidates and response.candidates[0].content.parts:
+        if hasattr(response, 'function_call') and response.function_call:
+            fc = response.function_call
+        elif response.candidates and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 if hasattr(part, 'function_call') and part.function_call:
                     fc = part.function_call
                     break
 
-        if fc and fc.name == "get_weather":
-            location = fc.args["location_name"]
-            weather_data = await get_weather(location_name=location)
-            response = await chat.send_message_async(
-                [{
-                    "function_response": {
-                        "name": "get_weather",
-                        "response": {"result": weather_data}
-                    }
-                }]
-            )
-
-        return response.text
-    except Exception as e:
-        print(f"[ERROR] Gemini Agent failed: {str(e)}")
-        return "Sorry, I am facing some issues connecting to the weather servers right now. Please try again in a moment."
-        return response.text
-
+        # Check karo ki kya Gemini ne weather function manga hai
+        if fc:
+            function_name = fc.name
+            
+            if function_name in ["get_weather", "fetch_open_meteo_data"]:
+                # Location nikalo (default VIT-AP agar na mile toh)
+                try:
+                    location_arg = fc.args.get("location_name", "VIT-AP")
+                except AttributeError:
+                    location_arg = fc.args["location_name"] if "location_name" in fc.args else "VIT-AP"
+                except Exception:
+                    location_arg = "VIT-AP"
+                
+                # Asli weather function call karo
+                weather_data = await get_weather(location_name=location_arg)
+                
+                # Data wapas Gemini ko bhej do taaki wo text sentence bana sake
+                response = await chat.send_message_async(
+                    [{
+                        "function_response": {
+                            "name": function_name,
+                            "response": {"result": weather_data}
+                        }
+                    }]
+                )
+                
+        # Ab final text return karo
         return response.text
     except Exception as e:
         print(f"[ERROR] Gemini Agent failed: {str(e)}")

@@ -1,6 +1,5 @@
-import os
-import google.generativeai as genai
-
+from app.weather import get_weather
+from app.database import get_chat_history
 # FIXED: Removed 'app.' since all files are in the same folder
 from weather import get_weather
 from database import get_chat_history 

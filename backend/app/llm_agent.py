@@ -1,8 +1,9 @@
+import os
+import google.generativeai as genai
+
+# Sirf yeh do line honi chahiye imports mein Render ke liye!
 from app.weather import get_weather
-from app.database import get_chat_history
-# FIXED: Removed 'app.' since all files are in the same folder
-from weather import get_weather
-from database import get_chat_history 
+from app.database import get_chat_history 
 
 # Initialize Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))

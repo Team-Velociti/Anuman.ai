@@ -1,11 +1,9 @@
 import os
 import google.generativeai as genai
 
-# Sirf yeh do line honi chahiye imports mein Render ke liye!
 from app.weather import get_weather
 from app.database import get_chat_history 
 
-# Initialize Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 weather_tool = {
@@ -31,7 +29,7 @@ weather_tool = {
 model = genai.GenerativeModel(
     model_name="gemini-3.6-flash", 
     tools=[weather_tool],
-    system_instruction="You are Anuman.ai, an intelligent conversational weather assistant built for the Ministry of Earth Sciences. You help farmers, commuters, and citizens in India. Keep your answers concise, natural, and highly actionable (e.g., crop advice for farmers). Support Hindi and English."
+    system_instruction="You are Anuman.ai, an intelligent conversational weather assistant built for the Ministry of Earth Sciences. You help farmers, commuters, and citizens in India. Keep your answers concise, natural, and highly actionable. Support Hindi and English."
 )
 
 async def process_gemini_chat(session_id: str, user_message: str, location_key: str = None) -> str:
@@ -45,11 +43,9 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
 
         # 3. Robust Tool Call Check
         try:
-            # Agar normal text hai toh yahi se return ho jayega
             return response.text
         except ValueError:
-            # ValueError aaya matlab Gemini ne text nahi, balki Function Call return kiya hai!
-            pass 
+            pass # ValueError means Gemini returned a Function Call!
 
         # 4. Handle Function Call
         if response.candidates and response.candidates[0].content.parts:
@@ -58,25 +54,30 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
             
             if function_name in ["get_weather", "fetch_open_meteo_data"]:
                 
-                # Safely extract location (default to VIT-AP)
+                # Safely extract location using broad try-except
                 location_arg = "VIT-AP"
-                if "location_name" in fc.args:
+                try:
                     location_arg = fc.args["location_name"]
+                except Exception:
+                    pass
                 
-                # Asli weather function call karo
+                # Fetch Weather Data
                 weather_data = await get_weather(location_name=location_arg)
                 
-                # Data wapas Gemini ko bhej do taaki wo final text sentence bana sake
+                # MAGIC BULLET: Convert complex dictionary to string!
+                # Gemini SDK crashes if you send raw nested JSON.
+                weather_str = str(weather_data)
+                
+                # Send data back to Gemini
                 second_response = await chat.send_message_async(
                     [{
                         "function_response": {
                             "name": function_name,
-                            "response": {"result": weather_data}
+                            "response": {"result": weather_str}
                         }
                     }]
                 )
                 
-                # Final text return karo
                 return second_response.text
 
     except Exception as e:

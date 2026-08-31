@@ -1,16 +1,11 @@
 import os
 import google.generativeai as genai
-import google.generativeai as genai
-
-for m in genai.list_models():
-  if 'generateContent' in m.supported_generation_methods:
-    print(m.name)
-
 
 # FIXED: Removed 'app.' since all files are in the same folder
-from app.weather import get_weather
-from app.database import get_chat_history 
+from weather import get_weather
+from database import get_chat_history 
 
+# Initialize Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 weather_tool = {
@@ -24,7 +19,7 @@ weather_tool = {
                     "location_name": {
                         "type": "STRING",
                         "description": "The specific location to fetch weather for.",
-                        "enum": ["Inavalu", "VIT-AP", "Vijayawada", "Vizag"]
+                        "enum": ["Inavalu", "VIT-AP", "Vijayawada", "Guntur", "Vizag"]
                     }
                 },
                 "required": ["location_name"]
@@ -34,45 +29,45 @@ weather_tool = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-3.6-flash",
+    model_name="gemini-3.6-flash", 
     tools=[weather_tool],
     system_instruction="You are Anuman.ai, an intelligent conversational weather assistant built for the Ministry of Earth Sciences. You help farmers, commuters, and citizens in India. Keep your answers concise, natural, and highly actionable (e.g., crop advice for farmers). Support Hindi and English."
 )
 
 async def process_gemini_chat(session_id: str, user_message: str, location_key: str = None) -> str:
     try:
+        # 1. Fetch History & Start Chat
         past_history = await get_chat_history(session_id)
         chat = model.start_chat(history=past_history if past_history else [])
+        
+        # 2. Send User Message
         response = await chat.send_message_async(user_message)
 
-        # Robustly extract function call
-        fc = None
-        if hasattr(response, 'function_call') and response.function_call:
-            fc = response.function_call
-        elif response.candidates and response.candidates[0].content.parts:
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, 'function_call') and part.function_call:
-                    fc = part.function_call
-                    break
+        # 3. Robust Tool Call Check
+        try:
+            # Agar normal text hai toh yahi se return ho jayega
+            return response.text
+        except ValueError:
+            # ValueError aaya matlab Gemini ne text nahi, balki Function Call return kiya hai!
+            pass 
 
-        # Check karo ki kya Gemini ne weather function manga hai
-        if fc:
+        # 4. Handle Function Call
+        if response.candidates and response.candidates[0].content.parts:
+            fc = response.candidates[0].content.parts[0].function_call
             function_name = fc.name
             
             if function_name in ["get_weather", "fetch_open_meteo_data"]:
-                # Location nikalo (default VIT-AP agar na mile toh)
-                try:
-                    location_arg = fc.args.get("location_name", "VIT-AP")
-                except AttributeError:
-                    location_arg = fc.args["location_name"] if "location_name" in fc.args else "VIT-AP"
-                except Exception:
-                    location_arg = "VIT-AP"
+                
+                # Safely extract location (default to VIT-AP)
+                location_arg = "VIT-AP"
+                if "location_name" in fc.args:
+                    location_arg = fc.args["location_name"]
                 
                 # Asli weather function call karo
                 weather_data = await get_weather(location_name=location_arg)
                 
-                # Data wapas Gemini ko bhej do taaki wo text sentence bana sake
-                response = await chat.send_message_async(
+                # Data wapas Gemini ko bhej do taaki wo final text sentence bana sake
+                second_response = await chat.send_message_async(
                     [{
                         "function_response": {
                             "name": function_name,
@@ -81,8 +76,9 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
                     }]
                 )
                 
-        # Ab final text return karo
-        return response.text
+                # Final text return karo
+                return second_response.text
+
     except Exception as e:
         print(f"[ERROR] Gemini Agent failed: {str(e)}")
         return "Sorry, I am facing some issues connecting to the weather servers right now. Please try again in a moment."

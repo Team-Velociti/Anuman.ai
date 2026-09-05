@@ -47,9 +47,43 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .mic-active { animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); } 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); } }
+
+        /* --- Glow background (Gemini-style, subtle) --- */
+        .ambient-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        .ambient-glow.glow-light {
+            background:
+                radial-gradient(ellipse 55% 45% at 100% 0%, rgba(14,165,233,0.10), transparent 60%),
+                radial-gradient(ellipse 50% 40% at 0% 100%, rgba(168,85,247,0.07), transparent 60%);
+        }
+        .ambient-glow.glow-dark {
+            background:
+                radial-gradient(ellipse 55% 45% at 100% 0%, rgba(14,165,233,0.16), transparent 60%),
+                radial-gradient(ellipse 50% 40% at 0% 100%, rgba(168,85,247,0.11), transparent 60%);
+        }
+
+        /* --- Glassmorphism cards --- */
+        .glass-card {
+            background: rgba(255,255,255,0.55);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .dark .glass-card {
+            background: rgba(19,19,19,0.55);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* --- Dropdown panel --- */
+        #dropdown-panel { max-height: 0; overflow: hidden; transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+        #dropdown-chevron { transition: transform 0.35s ease; }
+        #header-trigger[aria-expanded="true"] #dropdown-chevron { transform: rotate(180deg); }
 </style>
 </head>
 <body class="bg-background dark:bg-dark-background text-on-surface dark:text-dark-on-surface min-h-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-white transition-colors duration-300 h-screen">
+
+<!-- Ambient glow background -->
+<div class="ambient-glow glow-light dark:hidden"></div>
+<div class="ambient-glow glow-dark hidden dark:block"></div>
 
 <!-- Splash Screen -->
 <div class="fixed inset-0 z-[100] bg-background dark:bg-dark-background flex items-center justify-center" id="splash">
@@ -58,26 +92,59 @@
 
 <!-- Top App Bar -->
 <header class="fixed top-0 w-full z-50 bg-background/80 dark:bg-dark-background/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
-    <div class="flex justify-between items-center px-4 py-4 w-full max-w-3xl mx-auto h-16">
-        <div class="font-bold text-primary text-2xl tracking-tight">anuman.ai</div>
-        <div class="flex items-center gap-4">
-            <button aria-label="Toggle Theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" id="theme-toggle">
-                <span class="material-symbols-outlined dark-icon hidden">dark_mode</span>
-                <span class="material-symbols-outlined light-icon">light_mode</span>
-            </button>
-            <button aria-label="Login" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center gap-2" id="login-btn">
-                <span class="material-symbols-outlined text-primary hidden" id="user-avatar-icon">face</span>
-                <span class="material-symbols-outlined" id="guest-icon">account_circle</span>
-                <span class="text-sm hidden md:inline font-medium" id="user-name-display">Guest</span>
-            </button>
+    <button id="header-trigger" aria-expanded="false" aria-controls="dropdown-panel" class="w-full flex justify-center items-center px-4 py-4 h-16 group cursor-pointer">
+        <span class="font-bold text-primary text-2xl tracking-tight flex items-center gap-1.5">
+            anuman.ai
+            <span class="material-symbols-outlined text-[20px] text-gray-400" id="dropdown-chevron">expand_more</span>
+        </span>
+    </button>
+
+    <div id="dropdown-panel">
+        <div class="max-w-3xl mx-auto px-4 pb-5 flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                <div class="relative flex-1 min-w-[160px] max-w-[240px]">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">location_on</span>
+                    <input id="location-search" type="text" value="Amaravati" placeholder="Search location..." class="w-full bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full pl-9 pr-3 py-2 text-sm text-on-surface dark:text-dark-on-surface focus:ring-1 focus:ring-primary-container outline-none">
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button aria-label="Toggle Theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" id="theme-toggle">
+                        <span class="material-symbols-outlined dark-icon hidden">dark_mode</span>
+                        <span class="material-symbols-outlined light-icon">light_mode</span>
+                    </button>
+                    <button aria-label="Login" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center gap-2" id="login-btn">
+                        <span class="material-symbols-outlined text-primary hidden" id="user-avatar-icon">face</span>
+                        <span class="material-symbols-outlined" id="guest-icon">account_circle</span>
+                        <span class="text-sm hidden md:inline font-medium" id="user-name-display">Guest</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
+                    <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">device_thermostat</span>Temperature</span>
+                    <span class="text-lg font-bold">31°C</span>
+                </div>
+                <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
+                    <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">humidity_percentage</span>Humidity</span>
+                    <span class="text-lg font-bold">64%</span>
+                </div>
+                <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
+                    <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">air</span>Wind</span>
+                    <span class="text-lg font-bold">12 km/h</span>
+                </div>
+                <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
+                    <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">visibility</span>Visibility</span>
+                    <span class="text-lg font-bold">8 km</span>
+                </div>
+            </div>
         </div>
     </div>
 </header>
 
 <!-- Main Chat Canvas -->
-<main class="flex-1 flex flex-col relative w-full h-full justify-center items-center">
-    <div id="chat-messages" class="absolute top-[70px] bottom-0 left-0 right-0 overflow-y-auto hidden flex-col gap-5 p-4 pb-48 w-full max-w-3xl mx-auto z-10 scroll-smooth hide-scrollbar"></div>
-    <div class="relative flex justify-center items-center z-20 transition-all duration-500" id="mic-container">
+<main class="flex-1 flex flex-col relative w-full h-full justify-center items-center z-10">
+    <div id="chat-messages" class="absolute top-[84px] bottom-[104px] left-2 right-2 md:left-4 md:right-4 overflow-y-auto hidden flex-col gap-5 p-4 mx-auto w-auto max-w-3xl rounded-3xl glass-card hover:-translate-y-1 hover:shadow-lg transition-all z-10 scroll-smooth hide-scrollbar"></div>
+    <div class="relative flex justify-center items-center z-20 transition-all duration-500 glass-card rounded-[2.5rem] p-10 hover:-translate-y-1 hover:shadow-xl" id="mic-container">
         <div id="mic-aura" class="absolute w-36 h-36 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur-[25px] opacity-30 dark:opacity-40 transition-opacity duration-300"></div>
         <button id="mic-btn" class="mic-fab fluid-gradient relative w-28 h-28 rounded-full text-white shadow-2xl hover:scale-105 active:scale-95 flex items-center justify-center transition-all duration-500">
             <span class="material-symbols-outlined text-[42px]" id="mic-icon">mic</span>
@@ -87,17 +154,15 @@
 
 <!-- Bottom Input Area -->
 <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background dark:from-dark-background via-background/90 dark:via-dark-background/90 to-transparent pt-8 pb-4 px-4 z-40">
-    <div class="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 relative">
+    <div class="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 relative glass-card rounded-3xl p-5 hover:-translate-y-1 hover:shadow-xl transition-all">
         <div id="suggestion-chips" class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs transition-opacity duration-300" style="animation: fadeInUp 0.5s ease 2s forwards;">
-            <button onclick="sendLocationQuery('Inavalu')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Inavalu</button>
             <button onclick="sendLocationQuery('VIT-AP')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> VIT-AP</button>
             <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada</button>
-            <button onclick="sendLocationQuery('Guntur')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Guntur</button>
         </div>
-        
+
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
             <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-dark-on-surface pl-6 pr-[90px] py-4 rounded-full placeholder-gray-400" id="chat-input" placeholder="Ask Anuman about the weather..." type="text">
-            
+
             <div class="absolute right-2 flex items-center gap-1">
                 <button id="small-mic-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-primary transition-all duration-300">
                     <span class="material-symbols-outlined text-[24px]">mic</span>
@@ -118,7 +183,7 @@
         <div class="p-8 pb-4 text-center border-b border-gray-100 dark:border-gray-800">
             <h2 class="text-2xl font-bold text-primary dark:text-primary-fixed-dim" id="auth-title">Welcome</h2>
             <p class="text-gray-500 mt-2 text-sm" id="auth-subtitle">Login or sign up to continue.</p>
-            
+
             <div class="flex justify-center mt-4 border-b border-gray-200 dark:border-gray-700" id="auth-tabs">
                 <button id="tab-login" class="px-4 py-2 border-b-2 border-primary text-primary font-medium transition-colors">Log In</button>
                 <button id="tab-signup" class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Sign Up</button>
@@ -130,6 +195,12 @@
                 <input id="setup-age" class="w-full bg-transparent border border-gray-300 dark:border-gray-700 focus:ring-1 focus:ring-primary-container rounded-xl px-4 py-3 text-on-surface dark:text-white" placeholder="Age" type="number">
             </div>
             <input id="setup-email" class="w-full bg-transparent border border-gray-300 dark:border-gray-700 focus:ring-1 focus:ring-primary-container rounded-xl px-4 py-3 text-on-surface dark:text-white" placeholder="Email address" type="email" required>
+
+            <label id="remember-me-row" class="flex items-center gap-2 select-none cursor-pointer -mt-1">
+                <input id="remember-me" type="checkbox" class="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-primary-container focus:ring-primary-container accent-primary-container">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Remember me</span>
+            </label>
+
             <button id="save-profile-btn" class="w-full bg-primary-container text-white text-base rounded-xl py-3 hover:bg-primary transition-colors font-semibold shadow-md shadow-primary-container/20 mt-2">Log In</button>
             <button id="view-history-btn" class="w-full bg-gray-100 dark:bg-gray-800 text-on-surface dark:text-white text-base rounded-xl py-3 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-semibold hidden mt-2">View History</button>
             <button id="logout-btn" class="w-full bg-red-500/10 text-red-500 text-base rounded-xl py-3 hover:bg-red-500/20 transition-colors font-semibold hidden mt-2">Log Out</button>
@@ -151,12 +222,36 @@
 </div>
 
 <script>
+
+function autoDetectLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                const data = await res.json();
+                const city = data.address.city || data.address.town || data.address.village || data.address.county;
+
+                if(city) {
+                    const locationInput = document.getElementById('location-search');
+                    if (locationInput) locationInput.value = city;
+                }
+            } catch(e) { console.log("Location auto-detect failed", e); }
+        }, (error) => {
+            console.log("User denied location permission");
+        });
+    }
+}
+
     const API_BASE = "https://anuman-ai.onrender.com";
     let isChatActive = false; 
     let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
     let wasLastInputVoice = false; // <--- Naya flag voice trigger check karne ke liye
 
     document.addEventListener('DOMContentLoaded', () => {
+    autoDetectLocation();
+
         const splash = document.getElementById('splash');
         setTimeout(() => { splash.style.opacity = '0'; splash.style.visibility = 'hidden'; }, 3000); 
 
@@ -166,6 +261,16 @@
             html.classList.toggle('dark');
             themeToggleBtn.querySelector('.dark-icon').classList.toggle('hidden');
             themeToggleBtn.querySelector('.light-icon').classList.toggle('hidden');
+        });
+
+        // --- HEADER DROPDOWN LOGIC (new UI only, no core logic touched) ---
+        const headerTrigger = document.getElementById('header-trigger');
+        const dropdownPanel = document.getElementById('dropdown-panel');
+        let dropdownOpen = false;
+        headerTrigger.addEventListener('click', () => {
+            dropdownOpen = !dropdownOpen;
+            headerTrigger.setAttribute('aria-expanded', dropdownOpen ? 'true' : 'false');
+            dropdownPanel.style.maxHeight = dropdownOpen ? dropdownPanel.scrollHeight + 'px' : '0px';
         });
 
         const chatInput = document.getElementById('chat-input');
@@ -486,15 +591,18 @@
             sendBtn.style.opacity = '1'; sendBtn.style.transform = 'scale(1)'; sendBtn.style.pointerEvents = 'none';
 
             try {
-                const res = await fetch(`${API_BASE}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: query, 
-                        session_id: currentUserSessionId,
-                        is_voice: isVoiceQuery // <--- Backend ko bhej diya
-                    }) 
-                });
+                const currentLocation = document.getElementById('location-search') ? document.getElementById('location-search').value : '';
+            const smartQuery = currentLocation ? `${query} (Context: User is currently in ${currentLocation})` : query;
+
+            const res = await fetch(`${API_BASE}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    message: smartQuery, 
+                    session_id: currentUserSessionId,
+                    is_voice: isVoiceQuery 
+                }) 
+            });
                 const data = await res.json();
                 if (data.reply) {
                     appendMessage('ai', data.reply);

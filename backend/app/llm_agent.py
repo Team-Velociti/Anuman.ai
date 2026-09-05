@@ -4,7 +4,23 @@ import google.generativeai as genai
 from app.weather import get_weather
 from app.database import get_chat_history 
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+import random
+
+# Fetch all 4 keys from environment variables
+API_KEYS = [
+    os.environ.get("GEMINI_API_KEY_1"),
+    os.environ.get("GEMINI_API_KEY_2"),
+    os.environ.get("GEMINI_API_KEY_3"),
+    os.environ.get("GEMINI_API_KEY_4")
+]
+# Filter out any None or empty values
+VALID_KEYS = [key for key in API_KEYS if key] 
+
+if VALID_KEYS:
+    current_key = random.choice(VALID_KEYS)
+    genai.configure(api_key=current_key)
+else:
+    print("WARNING: No Gemini API keys found!")
 
 weather_tool = {
     "function_declarations": [

@@ -1,42 +1,34 @@
 import httpx
 from typing import Any, Dict
 
-LOCATIONS: Dict[str, tuple[float, float]] = {
-    "Inavalu": (16.5022, 80.5222),
-    "VIT-AP": (16.4971, 80.5086),
-    "Vijayawada": (16.5062, 80.6480),
-    "Vizag": (17.6868, 83.2185)
-}
-
-# Helper mapping to handle inputs from Frontend/Hemang vs Gemini
-KEY_MAP = {
-    "guntur": "Inavalu",
-    "inavalu": "Inavalu",
-    "vit_ap": "VIT-AP",
-    "vit-ap": "VIT-AP",
-    "vijayawada": "Vijayawada",
-    "vizag": "Vizag"
-}
-
 async def get_weather(location_name: str) -> Dict[str, Any]:
     lookup_name = location_name.strip()
-    if lookup_name.lower() in KEY_MAP:
-        lookup_name = KEY_MAP[lookup_name.lower()]
-        
-    if lookup_name not in LOCATIONS:
-        lookup_name = "VIT-AP" # Default fallback if AI hallucinates a random name
-
-    lat, lon = LOCATIONS[lookup_name]
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min"
+    
+    lat, lon = 28.6139, 77.2090 # Default fallback coordinates
+    resolved_name = lookup_name
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
+            # 1. Geocode the location name to get lat, lon
+            geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={lookup_name}&count=1&language=en&format=json"
+            geo_res = await client.get(geo_url)
+            
+            if geo_res.status_code == 200:
+                geo_data = geo_res.json()
+                if "results" in geo_data and len(geo_data["results"]) > 0:
+                    lat = geo_data["results"][0]["latitude"]
+                    lon = geo_data["results"][0]["longitude"]
+                    resolved_name = geo_data["results"][0].get("name", lookup_name)
+
+            # 2. Fetch the actual weather forecast using the dynamic coordinates
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min"
+            
             res = await client.get(url)
             res.raise_for_status()
             data = res.json()
 
             return {
-                "location": lookup_name,
+                "location": resolved_name,
                 "temperature": data.get("current", {}).get("temperature_2m", 30),
                 "humidity": data.get("current", {}).get("relative_humidity_2m", 70),
                 "conditions": data.get("current", {}).get("weather_code", 0),

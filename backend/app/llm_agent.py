@@ -32,8 +32,7 @@ weather_tool = {
                 "properties": {
                     "location_name": {
                         "type": "STRING",
-                        "description": "The specific location to fetch weather for.",
-                        "enum": ["Inavalu", "VIT-AP", "Vijayawada", "Guntur", "Vizag"]
+                        "description": "The specific location to fetch weather for."
                     }
                 },
                 "required": ["location_name"]
@@ -46,13 +45,16 @@ model = genai.GenerativeModel(
     model_name="gemini-3.6-flash", 
     tools=[weather_tool],
     system_instruction=(
-        "You are Anuman.ai, an intelligent and highly professional weather assistant for India. "
+        "You are Anuman.ai, a global weather assistant. "
+        "1. If the user explicitly asks for the weather in a specific location (e.g., 'weather in Bokaro'), you MUST fetch and return the weather for that specific location, ignoring the background context. "
+        "2. If the user asks a general question without specifying a location (e.g., 'how is the weather?'), ONLY THEN use the location provided in the '(Context: User is currently in [City])' string attached to the prompt. "
+        "3. Never say a location is unsupported. You support global weather tracking. "
         "CRITICAL RULES FOR RESPONDING: "
-        "1. NEVER output your internal reasoning, thought process, or mention 'tool calls', 'dicts', or data structures. "
-        "2. NEVER say words like 'Wait', 'Let me check', 'Let's summarize', or 'Ah'. "
-        "3. DIRECTLY and IMMEDIATELY answer the user's question using the weather data provided. "
-        "4. Keep your answers extremely concise, natural, and to-the-point. "
-        "5. Provide 1-2 lines of highly actionable advice (e.g., for farmers, students or commuters) based on the weather. "
+        "4. NEVER output your internal reasoning, thought process, or mention 'tool calls', 'dicts', or data structures. "
+        "5. NEVER say words like 'Wait', 'Let me check', 'Let's summarize', or 'Ah'. "
+        "6. DIRECTLY and IMMEDIATELY answer the user's question using the weather data provided. "
+        "7. Keep your answers extremely concise, natural, and to-the-point. "
+        "8. Provide 1-2 lines of highly actionable advice (e.g., for farmers, students or commuters) based on the weather. "
         "Speak clearly like a professional news anchor."
     )
 )

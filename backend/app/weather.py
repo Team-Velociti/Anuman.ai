@@ -21,7 +21,7 @@ async def get_weather(location_name: str) -> Dict[str, Any]:
                     resolved_name = geo_data["results"][0].get("name", lookup_name)
 
             # 2. Fetch the actual weather forecast using the dynamic coordinates
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min"
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto"
             
             res = await client.get(url)
             res.raise_for_status()
@@ -31,8 +31,7 @@ async def get_weather(location_name: str) -> Dict[str, Any]:
                 "location": resolved_name,
                 "temperature": data.get("current", {}).get("temperature_2m", 30),
                 "humidity": data.get("current", {}).get("relative_humidity_2m", 70),
-                "conditions": data.get("current", {}).get("weather_code", 0),
-                "daily_forecast": data.get("daily", {})
+                "conditions": data.get("current", {}).get("weather_code", 0)
             }
     except Exception as e:
         print(f"[WEATHER ERROR] {str(e)}")
@@ -41,8 +40,7 @@ async def get_weather(location_name: str) -> Dict[str, Any]:
             "location": lookup_name,
             "temperature": 32.0,
             "humidity": 65,
-            "conditions": 1,
-            "daily_forecast": {}
+            "conditions": 1
         }
 
 # =====================================================================

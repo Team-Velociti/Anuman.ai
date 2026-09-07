@@ -77,6 +77,14 @@
         #dropdown-panel { max-height: 0; overflow: hidden; transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
         #dropdown-chevron { transition: transform 0.35s ease; }
         #header-trigger[aria-expanded="true"] #dropdown-chevron { transform: rotate(180deg); }
+
+        /* --- Persona select in signup --- */
+        .persona-option { transition: all 0.2s ease; cursor: pointer; }
+        .persona-option input:checked + div {
+            border-color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.08);
+            box-shadow: 0 0 0 1px #0ea5e9;
+        }
 </style>
 </head>
 <body class="bg-background dark:bg-dark-background text-on-surface dark:text-dark-on-surface min-h-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-white transition-colors duration-300 h-screen">
@@ -201,6 +209,26 @@
                 <span class="text-sm text-gray-500 dark:text-gray-400">Remember me</span>
             </label>
 
+            <div id="persona-select-field" class="flex flex-col gap-2 hidden">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Personalize your experience (Optional):</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="persona-option">
+                        <input type="radio" name="persona-role" value="Farmer" class="sr-only peer">
+                        <div class="flex flex-col items-center justify-center gap-1 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-center transition-all">
+                            <span class="material-symbols-outlined text-primary-container text-[22px]">agriculture</span>
+                            <span class="text-sm font-medium text-on-surface dark:text-white">I am a Farmer</span>
+                        </div>
+                    </label>
+                    <label class="persona-option">
+                        <input type="radio" name="persona-role" value="General" class="sr-only peer" checked>
+                        <div class="flex flex-col items-center justify-center gap-1 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-center transition-all">
+                            <span class="material-symbols-outlined text-primary-container text-[22px]">person</span>
+                            <span class="text-sm font-medium text-on-surface dark:text-white">General User</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <button id="save-profile-btn" class="w-full bg-primary-container text-white text-base rounded-xl py-3 hover:bg-primary transition-colors font-semibold shadow-md shadow-primary-container/20 mt-2">Log In</button>
             <button id="view-history-btn" class="w-full bg-gray-100 dark:bg-gray-800 text-on-surface dark:text-white text-base rounded-xl py-3 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-semibold hidden mt-2">View History</button>
             <button id="logout-btn" class="w-full bg-red-500/10 text-red-500 text-base rounded-xl py-3 hover:bg-red-500/20 transition-colors font-semibold hidden mt-2">Log Out</button>
@@ -249,8 +277,41 @@ function autoDetectLocation() {
     let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
     let wasLastInputVoice = false; // <--- Naya flag voice trigger check karne ke liye
 
+    // --- PERSONA / ROLE SUGGESTION CHIPS ---
+    const PERSONA_CHIPS = {
+        Farmer: [
+            { label: "Crop advisory", icon: "agriculture", query: "Give me a crop advisory" },
+            { label: "Spray safety", icon: "warning", query: "Is it safe to spray pesticides today?" }
+        ],
+        General: [
+            { label: "Today's weather", icon: "wb_sunny", query: "What's the weather today?" },
+            { label: "This week", icon: "calendar_month", query: "Will it rain this week?" }
+        ]
+    };
+
+    function getUserRole() {
+        return localStorage.getItem('anuman_role') || 'General';
+    }
+
+    function renderSuggestionChips() {
+        const suggestionChips = document.getElementById('suggestion-chips');
+        if (!suggestionChips) return;
+        const role = getUserRole();
+        const chips = PERSONA_CHIPS[role] || PERSONA_CHIPS.General;
+
+        suggestionChips.innerHTML = '';
+        chips.forEach(chip => {
+            const btn = document.createElement('button');
+            btn.className = "px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium";
+            btn.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary">${chip.icon}</span> ${chip.label}`;
+            btn.addEventListener('click', () => sendChipQuery(chip.query));
+            suggestionChips.appendChild(btn);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
     autoDetectLocation();
+    renderSuggestionChips();
 
         const splash = document.getElementById('splash');
         setTimeout(() => { splash.style.opacity = '0'; splash.style.visibility = 'hidden'; }, 3000); 
@@ -292,6 +353,7 @@ function autoDetectLocation() {
         const ageInput = document.getElementById('setup-age');
         const logoutBtn = document.getElementById('logout-btn');
         const saveProfileBtn = document.getElementById('save-profile-btn');
+        const personaSelectField = document.getElementById('persona-select-field');
         
         let authMode = 'login';
         const tabLogin = document.getElementById('tab-login');
@@ -317,6 +379,7 @@ function autoDetectLocation() {
             tabSignup.classList.remove('border-primary', 'text-primary');
             tabSignup.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-300');
             signupFields.classList.add('hidden');
+            personaSelectField.classList.add('hidden');
             saveProfileBtn.innerText = "Log In";
         });
 
@@ -327,6 +390,7 @@ function autoDetectLocation() {
             tabLogin.classList.remove('border-primary', 'text-primary');
             tabLogin.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-300');
             signupFields.classList.remove('hidden');
+            personaSelectField.classList.remove('hidden');
             saveProfileBtn.innerText = "Sign Up";
         });
 
@@ -349,6 +413,7 @@ function autoDetectLocation() {
                 saveProfileBtn.innerText = "Update Details";
                 authTabs.classList.add('hidden');
                 signupFields.classList.remove('hidden');
+                personaSelectField.classList.add('hidden');
                 authTitle.innerText = "Your Profile";
                 authSubtitle.innerText = "Manage your account.";
             } else {
@@ -361,11 +426,17 @@ function autoDetectLocation() {
                 viewHistoryBtn.classList.add('hidden');
                 saveProfileBtn.innerText = authMode === 'login' ? "Log In" : "Sign Up";
                 authTabs.classList.remove('hidden');
-                if (authMode === 'login') signupFields.classList.add('hidden');
-                else signupFields.classList.remove('hidden');
+                if (authMode === 'login') {
+                    signupFields.classList.add('hidden');
+                    personaSelectField.classList.add('hidden');
+                } else {
+                    signupFields.classList.remove('hidden');
+                    personaSelectField.classList.remove('hidden');
+                }
                 authTitle.innerText = "Welcome";
                 authSubtitle.innerText = "Login or sign up to continue.";
             }
+            renderSuggestionChips();
         }
         loadSession();
 
@@ -378,10 +449,13 @@ function autoDetectLocation() {
                         return;
                     }
                     const newSessionId = "user_" + btoa(emailInput.value).replace(/=/g, '').substring(0, 15);
+                    const selectedPersona = document.querySelector('input[name="persona-role"]:checked');
+                    const personaRole = selectedPersona ? selectedPersona.value : 'General';
                     localStorage.setItem('anuman_name', nameInput.value);
                     localStorage.setItem('anuman_email', emailInput.value);
                     localStorage.setItem('anuman_age', ageInput.value);
                     localStorage.setItem('anuman_session_id', newSessionId);
+                    localStorage.setItem('anuman_role', personaRole);
                 } else {
                     if(!emailInput.value) {
                         alert("Please enter your email.");
@@ -593,12 +667,14 @@ function autoDetectLocation() {
             try {
                 const currentLocation = document.getElementById('location-search') ? document.getElementById('location-search').value : '';
             const smartQuery = currentLocation ? `${query} (Context: User is currently in ${currentLocation})` : query;
+            const userRole = getUserRole();
 
             const res = await fetch(`${API_BASE}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: smartQuery, 
+                    role: userRole,
                     session_id: currentUserSessionId,
                     is_voice: isVoiceQuery 
                 }) 
@@ -627,6 +703,14 @@ function autoDetectLocation() {
 
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendBtn.click(); } });
     });
+
+    function sendChipQuery(text) {
+        const chatInput = document.getElementById('chat-input');
+        chatInput.value = text;
+        wasLastInputVoice = false;
+        chatInput.dispatchEvent(new Event('input'));
+        setTimeout(() => { document.getElementById('send-btn').click(); }, 100);
+    }
 
     async function sendLocationQuery(loc) {
         const chatInput = document.getElementById('chat-input');

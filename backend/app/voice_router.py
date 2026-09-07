@@ -39,7 +39,7 @@ async def text_to_speech(text: str) -> str:
         return None
 
     # AI response se emojis aur markdown characters (**, *, #, ~) hatao, sirf text/punctuation rakho
-    clean_text = re.sub(r'[^\w\s.,!?\'"-]', '', text)
+    clean_text = re.sub(r'[^\w\s.,!?\'\"-]', '', text)
     clean_text = clean_text.replace('_', '')
 
     url = "https://api.sarvam.ai/text-to-speech"
@@ -49,11 +49,11 @@ async def text_to_speech(text: str) -> str:
     }
     
     payload = {
-        "inputs": [clean_text], # Naye API endpoints usually 'inputs' array lete hain
-        "target_language_code": "hi-IN", # Sarvam Indian languages mein better hai
-        "speaker": "meera", # Default speaker
+        "inputs": [clean_text],
+        "target_language_code": "en-IN",
+        "speaker": "meera",
         "pitch": 0,
-        "pace": 1.1,
+        "pace": 1.0,
         "loudness": 1.5,
         "speech_sample_rate": 8000,
         "enable_preprocessing": True,
@@ -63,7 +63,10 @@ async def text_to_speech(text: str) -> str:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             res = await client.post(url, headers=headers, json=payload)
-            res.raise_for_status()
+            
+            if res.status_code != 200:
+                print(f"[TTS ERROR] Sarvam API returned {res.status_code}: {res.text}")
+                return None
             
             data = res.json()
             audios = data.get("audios", [])

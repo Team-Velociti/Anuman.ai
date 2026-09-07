@@ -51,13 +51,13 @@ async def text_to_speech(text: str) -> str:
     payload = {
         "inputs": [clean_text],
         "target_language_code": "en-IN",
-        "speaker": "meera",
+        "speaker": "anushka",
         "pitch": 0,
         "pace": 1.0,
         "loudness": 1.5,
         "speech_sample_rate": 8000,
         "enable_preprocessing": True,
-        "model": "bulbul:v1"
+        "model": "bulbul:v3"
     }
 
     try:

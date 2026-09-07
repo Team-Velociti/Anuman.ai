@@ -45,11 +45,14 @@ async def handle_chat(payload: ChatPayload):
         # 3. Handle Text-To-Speech if user used Voice
         audio_base64 = None
         if payload.is_voice:
-            # Markdown chars (**, *) hatao warna TTS usko ajeeb tarah padhega
-            clean_text = re.sub(r'\*+', '', ai_response_text)
-            audio_bytes = await text_to_speech(clean_text)
-            if audio_bytes:
-                audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+            try:
+                # Markdown chars (**, *) hatao warna TTS usko ajeeb tarah padhega
+                clean_text = re.sub(r'\*+', '', ai_response_text)
+                audio_base64 = await text_to_speech(clean_text)
+                # text_to_speech already returns a base64 string, no re-encoding needed
+            except Exception as tts_err:
+                print(f"[TTS ISOLATION] TTS failed but text response is safe: {tts_err}")
+                audio_base64 = None
         
         return {
             "status": "success",

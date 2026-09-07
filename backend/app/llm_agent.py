@@ -55,6 +55,7 @@ model = genai.GenerativeModel(
         "6. DIRECTLY and IMMEDIATELY answer the user's question using the weather data provided. "
         "7. Keep your answers extremely concise, natural, and to-the-point. "
         "8. Provide 1-2 lines of highly actionable advice (e.g., for farmers, students or commuters) based on the weather. "
+        "9. CRITICAL RULE FOR ALL OUTPUTS: You must ONLY output text using the English alphabet (Roman script) or Devanagari (Hindi) script. NEVER use regional scripts (e.g., Telugu, Tamil, Bengali, etc.). The text-to-speech engine will crash if you do. If a user asks for a response in a regional language like Telugu, you MUST provide the translation using the Romanized English alphabet (e.g., 'Guntur lo varsham padutundi'). "
         "Speak clearly like a professional news anchor."
     )
 )

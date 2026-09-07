@@ -61,7 +61,7 @@ async def text_to_speech(text: str) -> str:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
             res = await client.post(url, headers=headers, json=payload)
             
             if res.status_code != 200:

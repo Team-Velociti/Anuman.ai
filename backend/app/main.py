@@ -44,27 +44,30 @@ async def handle_chat(payload: ChatPayload):
         await save_chat_to_db(payload.session_id, payload.message, ai_response_text)
         updated_history = await get_chat_history(payload.session_id)
         
-        # 3. Handle Text-To-Speech if user used Voice
-        audio_base64 = None
-        if payload.is_voice:
-            try:
-                # Markdown chars (**, *) hatao warna TTS usko ajeeb tarah padhega
-                clean_text = re.sub(r'\*+', '', ai_response_text)
-                audio_base64 = await text_to_speech(clean_text)
-                # text_to_speech already returns a base64 string, no re-encoding needed
-            except Exception as tts_err:
-                print(f"[TTS ISOLATION] TTS failed but text response is safe: {tts_err}")
-                audio_base64 = None
-        
         return {
             "status": "success",
             "session_id": payload.session_id,
             "reply": ai_response_text,
-            "chat_history": updated_history,
-            "audio_base64": audio_base64  # <--- Frontend ko audio bhej rahe hain
+            "chat_history": updated_history
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat routing failed: {str(e)}")
+
+class TTSPayload(BaseModel):
+    text: str
+
+@app.post("/api/tts", tags=["Voice"])
+async def handle_tts(payload: TTSPayload):
+    try:
+        # Markdown chars (**, *) hatao warna TTS usko ajeeb tarah padhega
+        clean_text = re.sub(r'\*+', '', payload.text)
+        audio_base64 = await text_to_speech(clean_text)
+        return {
+            "status": "success",
+            "audio_base64": audio_base64
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS processing failed: {str(e)}")
 
 @app.get("/api/history/{session_id}", tags=["History"])
 async def api_get_history(session_id: str):

@@ -51,7 +51,7 @@ async def text_to_speech(text: str) -> str:
     payload = {
         "inputs": [clean_text],
         "target_language_code": "en-IN",
-        "speaker": "anushka",
+        "speaker": "ritu",
         "pitch": 0,
         "pace": 1.0,
         "loudness": 1.5,

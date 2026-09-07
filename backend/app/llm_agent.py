@@ -59,13 +59,17 @@ model = genai.GenerativeModel(
     )
 )
 
-async def process_gemini_chat(session_id: str, user_message: str, location_key: str = None) -> str:
+async def process_gemini_chat(session_id: str, user_message: str, location_key: str = None, client_weather_context: str = None) -> str:
     try:
         # 1. Fetch History & Start Chat
         past_history = await get_chat_history(session_id)
         chat = model.start_chat(history=past_history if past_history else [])
         
-        # 2. Send User Message
+        # 2. Context Injection for Gemini
+        if client_weather_context:
+            user_message += f"\n\nSystem Note: The frontend has already fetched the live weather for the user: {client_weather_context}. Prioritize this data to answer the user's query and AVOID calling the backend weather tool."
+
+        # 3. Send User Message
         response = await chat.send_message_async(user_message)
 
         # 3. Robust Tool Call Check

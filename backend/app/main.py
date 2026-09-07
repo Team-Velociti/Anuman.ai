@@ -27,6 +27,7 @@ class ChatPayload(BaseModel):
     message: str
     location_key: Optional[str] = None
     is_voice: Optional[bool] = False  # <--- Naya flag add kiya TTS trigger karne ke liye
+    client_weather_context: Optional[str] = None
 
 @app.post("/api/chat", tags=["Chat"])
 async def handle_chat(payload: ChatPayload):
@@ -35,7 +36,8 @@ async def handle_chat(payload: ChatPayload):
         ai_response_text = await process_gemini_chat(
             session_id=payload.session_id,
             user_message=payload.message,
-            location_key=payload.location_key
+            location_key=payload.location_key,
+            client_weather_context=payload.client_weather_context
         )
         
         # 2. Save and Fetch History

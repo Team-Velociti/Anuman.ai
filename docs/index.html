@@ -500,7 +500,7 @@ function autoDetectLocation() {
             
             viewHistoryBtn.innerHTML = "Loading...";
             try {
-                const res = await fetch(`${API_BASE}/api/history/${currentUserSessionId}`);
+                const res = await fetch(`${API_BASE}/api/history/${currentUserSessionId}`, { headers: { "ngrok-skip-browser-warning": "true" } });
                 const data = await res.json();
                 
                 historyContent.innerHTML = '';

@@ -44,11 +44,22 @@ async def handle_chat(payload: ChatPayload):
         await save_chat_to_db(payload.session_id, payload.message, ai_response_text)
         updated_history = await get_chat_history(payload.session_id)
         
+        # 3. Handle Text-To-Speech if user used Voice
+        audio_base64 = None
+        if payload.is_voice:
+            try:
+                clean_text = re.sub(r'\*+', '', ai_response_text)
+                audio_base64 = await text_to_speech(clean_text)
+            except Exception as tts_err:
+                print(f"[TTS ISOLATION] TTS failed but text response is safe: {tts_err}")
+                audio_base64 = None
+        
         return {
             "status": "success",
             "session_id": payload.session_id,
             "reply": ai_response_text,
-            "chat_history": updated_history
+            "chat_history": updated_history,
+            "audio_base64": audio_base64
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat routing failed: {str(e)}")

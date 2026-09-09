@@ -78,14 +78,72 @@
         #dropdown-chevron { transition: transform 0.35s ease; }
         #header-trigger[aria-expanded="true"] #dropdown-chevron { transform: rotate(180deg); }
 
-        /* --- Persona select in signup --- */
-        .persona-option { transition: all 0.2s ease; cursor: pointer; }
-        .persona-option input:checked + div {
-            border-color: #0ea5e9;
-            background: rgba(14, 165, 233, 0.08);
-            box-shadow: 0 0 0 1px #0ea5e9;
+        /* --- TASK 1: Premium role-selection cards inside the auth modal --- */
+        .role-card-input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .role-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 16px 12px;
+            border-radius: 16px;
+            border: 1.5px solid rgba(148, 163, 184, 0.35);
+            background: rgba(148, 163, 184, 0.06);
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
         }
+        .role-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(14, 165, 233, 0.5);
+            background: rgba(14, 165, 233, 0.08);
+        }
+        .role-card .role-icon {
+            font-size: 26px;
+            transition: transform 0.25s ease;
+        }
+        .role-card-input:checked + .role-card {
+            border-color: #0ea5e9;
+            background: linear-gradient(135deg, rgba(14,165,233,0.16), rgba(168,85,247,0.10));
+            box-shadow: 0 0 0 1px #0ea5e9, 0 6px 16px -6px rgba(14,165,233,0.45);
+        }
+        .role-card-input:checked + .role-card .role-icon { transform: scale(1.12); }
+        .role-card-input:checked + .role-card .role-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .role-card .role-check {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            background: #0ea5e9;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s ease;
+        }
+        .role-card-input:focus-visible + .role-card { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+
+        /* --- TASK 2: Suggestion chip micro-interaction polish --- */
+        .smart-chip {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .smart-chip:hover { transform: translateY(-2px); }
+        .smart-chip:active { transform: scale(0.96); }
 </style>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0ea5e9">
+<link rel="apple-touch-icon" href="./icon-192.png">
 </head>
 <body class="bg-background dark:bg-dark-background text-on-surface dark:text-dark-on-surface min-h-screen flex flex-col overflow-hidden selection:bg-primary-container selection:text-white transition-colors duration-300 h-screen">
 
@@ -151,7 +209,7 @@
 
 <!-- Main Chat Canvas -->
 <main class="flex-1 flex flex-col relative w-full h-full justify-center items-center z-10">
-    <div id="chat-messages" class="absolute top-[84px] bottom-[150px] left-2 right-2 md:left-4 md:right-4 overflow-y-auto hidden flex-col gap-5 p-4 pb-12 mx-auto w-auto max-w-3xl rounded-3xl glass-card hover:-translate-y-1 hover:shadow-lg transition-all z-10 scroll-smooth hide-scrollbar"></div>
+    <div id="chat-messages" class="absolute top-[84px] bottom-[170px] left-2 right-2 md:left-4 md:right-4 overflow-y-auto hidden flex-col gap-5 p-4 pb-12 mx-auto w-auto max-w-3xl rounded-3xl glass-card hover:-translate-y-1 hover:shadow-lg transition-all z-10 scroll-smooth hide-scrollbar" style="overscroll-behavior: contain;"></div>
     <div class="relative flex justify-center items-center z-20 transition-all duration-500 glass-card rounded-[2.5rem] p-10 hover:-translate-y-1 hover:shadow-xl" id="mic-container">
         <div id="mic-aura" class="absolute w-36 h-36 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur-[25px] opacity-30 dark:opacity-40 transition-opacity duration-300"></div>
         <button id="mic-btn" class="mic-fab fluid-gradient relative w-28 h-28 rounded-full text-white shadow-2xl hover:scale-105 active:scale-95 flex items-center justify-center transition-all duration-500">
@@ -161,11 +219,10 @@
 </main>
 
 <!-- Bottom Input Area -->
-<div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background dark:from-dark-background via-background/90 dark:via-dark-background/90 to-transparent pt-8 pb-4 px-4 z-40">
+<div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background dark:from-dark-background via-background/90 dark:via-dark-background/90 to-transparent pt-8 pb-4 px-4 z-40" id="bottom-bar">
     <div class="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 relative glass-card rounded-3xl p-5 hover:-translate-y-1 hover:shadow-xl transition-all">
         <div id="suggestion-chips" class="grid grid-cols-2 gap-3 justify-center mx-auto opacity-0 w-full max-w-xs transition-opacity duration-300" style="animation: fadeInUp 0.5s ease 2s forwards;">
-            <button onclick="sendLocationQuery('VIT-AP')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> VIT-AP</button>
-            <button onclick="sendLocationQuery('Vijayawada')" class="px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Vijayawada</button>
+            <!-- Populated dynamically by renderSuggestionChips() based on the saved persona -->
         </div>
 
         <div class="relative w-full flex items-center bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 rounded-full shadow-lg focus-within:ring-1 focus-within:ring-primary-container transition-all duration-200">
@@ -186,7 +243,7 @@
 
 <!-- Custom Auth Modal (No Firebase) -->
 <div class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4" id="auth-modal">
-    <div class="bg-surface dark:bg-[#111] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800 relative">
+    <div class="bg-surface dark:bg-[#111] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800 relative max-h-[90vh]">
         <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" id="close-modal"><span class="material-symbols-outlined">close</span></button>
         <div class="p-8 pb-4 text-center border-b border-gray-100 dark:border-gray-800">
             <h2 class="text-2xl font-bold text-primary dark:text-primary-fixed-dim" id="auth-title">Welcome</h2>
@@ -197,7 +254,7 @@
                 <button id="tab-signup" class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Sign Up</button>
             </div>
         </div>
-        <div class="p-8 flex flex-col gap-4">
+        <div class="p-8 flex flex-col gap-4 overflow-y-auto hide-scrollbar">
             <div id="signup-fields" class="flex flex-col gap-4 hidden">
                 <input id="setup-name" class="w-full bg-transparent border border-gray-300 dark:border-gray-700 focus:ring-1 focus:ring-primary-container rounded-xl px-4 py-3 text-on-surface dark:text-white" placeholder="Full Name" type="text">
                 <input id="setup-age" class="w-full bg-transparent border border-gray-300 dark:border-gray-700 focus:ring-1 focus:ring-primary-container rounded-xl px-4 py-3 text-on-surface dark:text-white" placeholder="Age" type="number">
@@ -209,23 +266,28 @@
                 <span class="text-sm text-gray-500 dark:text-gray-400">Remember me</span>
             </label>
 
-            <div id="persona-select-field" class="flex flex-col gap-2 hidden">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Personalize your experience (Optional):</span>
+            <!-- TASK 1: Role selection — premium radio cards -->
+            <div id="role-select-field" class="flex flex-col gap-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Personalize your experience</span>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="persona-option">
-                        <input type="radio" name="persona-role" value="Farmer" class="sr-only peer">
-                        <div class="flex flex-col items-center justify-center gap-1 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-center transition-all">
-                            <span class="material-symbols-outlined text-primary-container text-[22px]">agriculture</span>
-                            <span class="text-sm font-medium text-on-surface dark:text-white">I am a Farmer</span>
-                        </div>
-                    </label>
-                    <label class="persona-option">
-                        <input type="radio" name="persona-role" value="General" class="sr-only peer" checked>
-                        <div class="flex flex-col items-center justify-center gap-1 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-center transition-all">
-                            <span class="material-symbols-outlined text-primary-container text-[22px]">person</span>
-                            <span class="text-sm font-medium text-on-surface dark:text-white">General User</span>
-                        </div>
-                    </label>
+                    <div>
+                        <input type="radio" name="user-role" id="role-general" value="General User" class="role-card-input" checked>
+                        <label for="role-general" class="role-card">
+                            <span class="role-check material-symbols-outlined" style="font-variation-settings:'FILL' 1;">check</span>
+                            <span class="role-icon">☀️</span>
+                            <span class="text-sm font-semibold text-on-surface dark:text-white">General User</span>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400">Everyday weather updates</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input type="radio" name="user-role" id="role-farmer" value="Farmer" class="role-card-input">
+                        <label for="role-farmer" class="role-card">
+                            <span class="role-check material-symbols-outlined" style="font-variation-settings:'FILL' 1;">check</span>
+                            <span class="role-icon">🌾</span>
+                            <span class="text-sm font-semibold text-on-surface dark:text-white">Farmer</span>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400">Crop &amp; spray advisories</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -277,41 +339,66 @@ function autoDetectLocation() {
     let currentUserSessionId = "guest_session_" + Math.random().toString(36).substring(7);
     let wasLastInputVoice = false; // <--- Naya flag voice trigger check karne ke liye
 
-    // --- PERSONA / ROLE SUGGESTION CHIPS ---
+    // --- TASK 2: PERSONA / ROLE SUGGESTION CHIPS ---
     const PERSONA_CHIPS = {
-        Farmer: [
-            { label: "Crop advisory", icon: "agriculture", query: "Give me a crop advisory" },
-            { label: "Spray safety", icon: "warning", query: "Is it safe to spray pesticides today?" }
+        "Farmer": [
+            { label: "Crop advisory", emoji: "🌾", query: "Give me a crop advisory" },
+            { label: "Spray safety", emoji: "⚠️", query: "Is it safe to spray pesticides today?" }
         ],
-        General: [
-            { label: "Today's weather", icon: "wb_sunny", query: "What's the weather today?" },
-            { label: "This week", icon: "calendar_month", query: "Will it rain this week?" }
+        "General User": [
+            { label: "Today's weather", emoji: "☀️", query: "What's the weather today?" },
+            { label: "This week", emoji: "📅", query: "Will it rain this week?" }
         ]
     };
 
     function getUserRole() {
-        return localStorage.getItem('anuman_role') || 'General';
+        return localStorage.getItem('userRole') || 'General User';
     }
 
     function renderSuggestionChips() {
         const suggestionChips = document.getElementById('suggestion-chips');
         if (!suggestionChips) return;
         const role = getUserRole();
-        const chips = PERSONA_CHIPS[role] || PERSONA_CHIPS.General;
+        const chips = PERSONA_CHIPS[role] || PERSONA_CHIPS["General User"];
 
         suggestionChips.innerHTML = '';
         chips.forEach(chip => {
             const btn = document.createElement('button');
-            btn.className = "px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium";
-            btn.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary">${chip.icon}</span> ${chip.label}`;
+            btn.type = 'button';
+            btn.className = "smart-chip px-3 py-2.5 rounded-full bg-surface dark:bg-dark-surface border border-gray-300 dark:border-gray-800 text-on-surface dark:text-dark-on-surface text-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5 font-medium";
+            btn.innerHTML = `<span class="text-[15px] leading-none">${chip.emoji}</span> ${chip.label}`;
             btn.addEventListener('click', () => sendChipQuery(chip.query));
             suggestionChips.appendChild(btn);
+        });
+    }
+
+    // --- TASK 3: keep the chat viewport clear of the fixed input bar ---
+    // Measures the actual rendered height of #bottom-bar (which changes once the
+    // suggestion chips hide after the first message) and pins #chat-messages'
+    // bottom edge just above it, so the latest bubble is always fully visible.
+    function syncChatViewport() {
+        const bottomBar = document.getElementById('bottom-bar');
+        const chatMessagesEl = document.getElementById('chat-messages');
+        if (!bottomBar || !chatMessagesEl) return;
+        const gap = 16; // breathing room above the input bar
+        chatMessagesEl.style.bottom = (bottomBar.offsetHeight + gap) + 'px';
+    }
+
+    function scrollChatToBottom() {
+        const chatMessagesEl = document.getElementById('chat-messages');
+        if (!chatMessagesEl) return;
+        // Run after layout/paint so the full height of the newest bubble is counted.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            });
         });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
     autoDetectLocation();
     renderSuggestionChips();
+    syncChatViewport();
 
         const splash = document.getElementById('splash');
         setTimeout(() => { splash.style.opacity = '0'; splash.style.visibility = 'hidden'; }, 3000); 
@@ -342,6 +429,18 @@ function autoDetectLocation() {
         const smallMicBtn = document.getElementById('small-mic-btn');
         const chatMessages = document.getElementById('chat-messages');
         const suggestionChips = document.getElementById('suggestion-chips');
+        const bottomBar = document.getElementById('bottom-bar');
+
+        // Keep the chat viewport in sync whenever the input bar's height changes
+        // (e.g. suggestion chips disappearing after the first message, on-screen
+        // keyboard opening/closing, or the window simply being resized/rotated).
+        window.addEventListener('resize', syncChatViewport);
+        if (window.ResizeObserver && bottomBar) {
+            new ResizeObserver(() => {
+                syncChatViewport();
+                if (isChatActive) scrollChatToBottom();
+            }).observe(bottomBar);
+        }
 
         // --- CUSTOM LOCAL AUTH LOGIC ---
         const authModal = document.getElementById('auth-modal');
@@ -353,7 +452,8 @@ function autoDetectLocation() {
         const ageInput = document.getElementById('setup-age');
         const logoutBtn = document.getElementById('logout-btn');
         const saveProfileBtn = document.getElementById('save-profile-btn');
-        const personaSelectField = document.getElementById('persona-select-field');
+        const roleGeneralInput = document.getElementById('role-general');
+        const roleFarmerInput = document.getElementById('role-farmer');
         
         let authMode = 'login';
         const tabLogin = document.getElementById('tab-login');
@@ -368,8 +468,22 @@ function autoDetectLocation() {
         const authTabs = document.getElementById('auth-tabs');
 
         function toggleModal() { authModal.classList.toggle('hidden'); }
+
+        // Reflects the currently saved role onto the radio cards, e.g. when opening
+        // the modal so the user sees their existing choice pre-selected.
+        function syncRoleFieldFromStorage() {
+            const savedRole = getUserRole();
+            if (savedRole === 'Farmer' && roleFarmerInput) {
+                roleFarmerInput.checked = true;
+            } else if (roleGeneralInput) {
+                roleGeneralInput.checked = true;
+            }
+        }
         
-        document.getElementById('login-btn').addEventListener('click', toggleModal);
+        document.getElementById('login-btn').addEventListener('click', () => {
+            syncRoleFieldFromStorage();
+            toggleModal();
+        });
         document.getElementById('close-modal').addEventListener('click', toggleModal);
         
         tabLogin.addEventListener('click', () => {
@@ -379,7 +493,6 @@ function autoDetectLocation() {
             tabSignup.classList.remove('border-primary', 'text-primary');
             tabSignup.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-300');
             signupFields.classList.add('hidden');
-            personaSelectField.classList.add('hidden');
             saveProfileBtn.innerText = "Log In";
         });
 
@@ -390,7 +503,6 @@ function autoDetectLocation() {
             tabLogin.classList.remove('border-primary', 'text-primary');
             tabLogin.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-300');
             signupFields.classList.remove('hidden');
-            personaSelectField.classList.remove('hidden');
             saveProfileBtn.innerText = "Sign Up";
         });
 
@@ -413,7 +525,6 @@ function autoDetectLocation() {
                 saveProfileBtn.innerText = "Update Details";
                 authTabs.classList.add('hidden');
                 signupFields.classList.remove('hidden');
-                personaSelectField.classList.add('hidden');
                 authTitle.innerText = "Your Profile";
                 authSubtitle.innerText = "Manage your account.";
             } else {
@@ -426,22 +537,23 @@ function autoDetectLocation() {
                 viewHistoryBtn.classList.add('hidden');
                 saveProfileBtn.innerText = authMode === 'login' ? "Log In" : "Sign Up";
                 authTabs.classList.remove('hidden');
-                if (authMode === 'login') {
-                    signupFields.classList.add('hidden');
-                    personaSelectField.classList.add('hidden');
-                } else {
-                    signupFields.classList.remove('hidden');
-                    personaSelectField.classList.remove('hidden');
-                }
+                if (authMode === 'login') signupFields.classList.add('hidden');
+                else signupFields.classList.remove('hidden');
                 authTitle.innerText = "Welcome";
                 authSubtitle.innerText = "Login or sign up to continue.";
             }
+            syncRoleFieldFromStorage();
             renderSuggestionChips();
         }
         loadSession();
 
         saveProfileBtn.addEventListener('click', () => {
             const isLoggedIn = localStorage.getItem('anuman_session_id');
+            // TASK 1: capture the selected role every time the modal is submitted —
+            // on fresh sign up, on login, and when updating an existing profile.
+            const selectedRoleInput = document.querySelector('input[name="user-role"]:checked');
+            const selectedRole = selectedRoleInput ? selectedRoleInput.value : 'General User';
+
             if (!isLoggedIn) {
                 if (authMode === 'signup') {
                     if(!nameInput.value || !emailInput.value || !ageInput.value) {
@@ -449,13 +561,10 @@ function autoDetectLocation() {
                         return;
                     }
                     const newSessionId = "user_" + btoa(emailInput.value).replace(/=/g, '').substring(0, 15);
-                    const selectedPersona = document.querySelector('input[name="persona-role"]:checked');
-                    const personaRole = selectedPersona ? selectedPersona.value : 'General';
                     localStorage.setItem('anuman_name', nameInput.value);
                     localStorage.setItem('anuman_email', emailInput.value);
                     localStorage.setItem('anuman_age', ageInput.value);
                     localStorage.setItem('anuman_session_id', newSessionId);
-                    localStorage.setItem('anuman_role', personaRole);
                 } else {
                     if(!emailInput.value) {
                         alert("Please enter your email.");
@@ -476,6 +585,7 @@ function autoDetectLocation() {
                 localStorage.setItem('anuman_email', emailInput.value);
                 localStorage.setItem('anuman_age', ageInput.value);
             }
+            localStorage.setItem('userRole', selectedRole);
             loadSession();
             toggleModal();
         });
@@ -638,6 +748,8 @@ function autoDetectLocation() {
                 suggestionChips.style.display = 'none';
                 chatMessages.classList.remove('hidden');
                 chatMessages.classList.add('flex');
+                // The input bar just got shorter (chips gone) — resync immediately.
+                syncChatViewport();
             }
             const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
             const msgDiv = document.createElement('div');
@@ -645,7 +757,9 @@ function autoDetectLocation() {
             msgDiv.style.animation = 'fadeInUp 0.4s ease forwards';
             msgDiv.innerHTML = `<div class="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${role === 'user' ? 'bg-primary-container text-white rounded-br-sm' : 'bg-surface dark:bg-dark-surface border border-gray-200 dark:border-gray-800 text-on-surface dark:text-dark-on-surface rounded-bl-sm'}"><p class="text-[15px] leading-relaxed font-medium">${formattedText}</p></div>`;
             chatMessages.appendChild(msgDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // TASK 3: wait for layout to settle before scrolling so the newest
+            // bubble's full height is included and never sits behind the input bar.
+            scrollChatToBottom();
         }
 
         sendBtn.addEventListener('click', async () => {
@@ -719,6 +833,19 @@ function autoDetectLocation() {
         chatInput.dispatchEvent(new Event('input'));
         setTimeout(() => { document.getElementById('send-btn').click(); }, 100);
     }
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+  }
 </script>
 </body>
 </html>

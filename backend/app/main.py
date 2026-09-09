@@ -9,7 +9,7 @@ from typing import Optional
 
 from app.llm_agent import process_gemini_chat
 from app.voice_router import process_sarvam_audio, text_to_speech
-from app.weather import fetch_open_meteo_data
+from app.weather import fetch_open_meteo_data, get_current_weather_by_coords
 from app.database import save_chat_to_db, get_chat_history
 
 app = FastAPI(title="Anuman.ai Backend")
@@ -109,6 +109,19 @@ async def handle_weather(location_key: str):
         return {"status": "success", "location": location_key, "data": weather_json}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/weather/current", tags=["Weather"])
+async def handle_current_weather(lat: float = Query(..., description="Latitude"), lon: float = Query(..., description="Longitude")):
+    try:
+        result = await get_current_weather_by_coords(lat, lon)
+        if result is None:
+            raise HTTPException(status_code=500, detail="Weather data unavailable. Use frontend fallback.")
+        return {"status": "success", "data": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[TOPBAR ENDPOINT] Unexpected crash: {e}")
+        raise HTTPException(status_code=500, detail="Internal error fetching weather.")
 
 @app.get("/")
 async def root():

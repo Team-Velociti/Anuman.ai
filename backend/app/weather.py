@@ -155,3 +155,46 @@ async def get_weather(location_name: str) -> Dict[str, Any]:
 async def fetch_open_meteo_data(location_key: str) -> Dict[str, Any]:
     """Wrapper function so Hemang's main.py can call this without errors."""
     return await get_weather(location_key)
+
+
+async def get_current_weather_by_coords(lat: float, lon: float) -> Dict[str, Any]:
+    """
+    Calls WeatherAPI.com using lat/lon for the top-bar UI widget.
+    Returns structured JSON with location, temperature, humidity, wind, visibility.
+    Returns None on any failure so the endpoint can return a 500.
+    """
+    if not WEATHERAPI_KEY:
+        print("[TOPBAR WEATHER] WEATHERAPI_KEY not set.")
+        return None
+
+    try:
+        url = f"https://api.weatherapi.com/v1/current.json?key={WEATHERAPI_KEY}&q={lat},{lon}&aqi=no"
+        async with httpx.AsyncClient(timeout=8.0, headers=_HEADERS) as client:
+            res = await client.get(url)
+            res.raise_for_status()
+            data = res.json()
+
+        location = data.get("location", {})
+        current = data.get("current", {})
+
+        return {
+            "location": location.get("name", "Unknown"),
+            "region": location.get("region", ""),
+            "temp_c": current.get("temp_c"),
+            "humidity": current.get("humidity"),
+            "wind_kph": current.get("wind_kph"),
+            "visibility_km": current.get("vis_km"),
+            "condition": current.get("condition", {}).get("text", "Unknown"),
+            "icon": current.get("condition", {}).get("icon", ""),
+            "source": "weatherapi"
+        }
+
+    except httpx.TimeoutException:
+        print(f"[TOPBAR WEATHER] Timeout for coords ({lat}, {lon})")
+        return None
+    except httpx.HTTPStatusError as e:
+        print(f"[TOPBAR WEATHER] HTTP {e.response.status_code} for coords ({lat}, {lon})")
+        return None
+    except Exception as e:
+        print(f"[TOPBAR WEATHER] Unexpected error: {e}")
+        return None

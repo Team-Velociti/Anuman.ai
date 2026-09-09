@@ -139,6 +139,35 @@
         }
         .smart-chip:hover { transform: translateY(-2px); }
         .smart-chip:active { transform: scale(0.96); }
+
+        /* --- Coming Soon overlay --- */
+.coming-soon-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 16px;
+    z-index: 10;
+}
+.dark .coming-soon-overlay { background: rgba(17, 17, 17, 0.55); }
+.coming-soon-badge {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: white;
+    background: linear-gradient(135deg, #0ea5e9, #a855f7);
+    box-shadow: 0 8px 20px -6px rgba(14, 165, 233, 0.55);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transform: rotate(-2deg);
+}
 </style>
 
 <link rel="manifest" href="./manifest.json">
@@ -188,19 +217,19 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
                     <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">device_thermostat</span>Temperature</span>
-                    <span class="text-lg font-bold">31°C</span>
+                    <span class="text-lg font-bold" id="weather-temp">31°C</span>
                 </div>
                 <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
                     <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">humidity_percentage</span>Humidity</span>
-                    <span class="text-lg font-bold">64%</span>
+                    <span class="text-lg font-bold" id="weather-humidity">64%</span>
                 </div>
                 <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
                     <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">air</span>Wind</span>
-                    <span class="text-lg font-bold">12 km/h</span>
+                    <span class="text-lg font-bold" id="weather-wind">12 km/h</span>
                 </div>
                 <div class="glass-card rounded-2xl p-3 flex flex-col gap-1 hover:-translate-y-1 hover:shadow-lg transition-all">
                     <span class="text-[11px] text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">visibility</span>Visibility</span>
-                    <span class="text-lg font-bold">8 km</span>
+                    <span class="text-lg font-bold" id="weather-visibility">8 km</span>
                 </div>
             </div>
         </div>
@@ -267,6 +296,7 @@
             </label>
 
             <!-- TASK 1: Role selection — premium radio cards -->
+            <div class="relative">
             <div id="role-select-field" class="flex flex-col gap-2">
                 <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Personalize your experience</span>
                 <div class="grid grid-cols-2 gap-3">
@@ -290,9 +320,17 @@
                     </div>
                 </div>
             </div>
+                <div class="coming-soon-overlay">
+                    <span class="coming-soon-badge">ð Coming Soon</span>
+                </div>
+            </div>
 
             <button id="save-profile-btn" class="w-full bg-primary-container text-white text-base rounded-xl py-3 hover:bg-primary transition-colors font-semibold shadow-md shadow-primary-container/20 mt-2">Log In</button>
             <button id="view-history-btn" class="w-full bg-gray-100 dark:bg-gray-800 text-on-surface dark:text-white text-base rounded-xl py-3 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-semibold hidden mt-2">View History</button>
+            <button id="pwa-install-btn" class="w-full bg-gradient-to-r from-sky-500 to-purple-500 text-white text-base rounded-xl py-3 hover:opacity-90 active:scale-[0.98] transition-all font-semibold shadow-md items-center justify-center gap-2 mt-2 hidden">
+                <span class="material-symbols-outlined text-[20px]">download</span>
+                Download App
+            </button>
             <button id="logout-btn" class="w-full bg-red-500/10 text-red-500 text-base rounded-xl py-3 hover:bg-red-500/20 transition-colors font-semibold hidden mt-2">Log Out</button>
         </div>
     </div>
@@ -312,6 +350,72 @@
 </div>
 
 <script>
+
+let deferredInstallPrompt = null;
+
+function isAppInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updateInstallButtonVisibility() {
+    const btn = document.getElementById('pwa-install-btn');
+    if (!btn) return;
+    const canInstall = !!deferredInstallPrompt && !isAppInstalled();
+    btn.classList.toggle('hidden', !canInstall);
+    btn.classList.toggle('flex', canInstall);
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallButtonVisibility();
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    updateInstallButtonVisibility();
+});
+
+
+function applyWeatherToTopBar(w) {
+    const locationInput = document.getElementById('location-search');
+    if (locationInput && w.location) locationInput.value = w.location;
+    const tempEl = document.getElementById('weather-temp');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+    const visEl = document.getElementById('weather-visibility');
+    if (tempEl) tempEl.innerText = w.temperature;
+    if (humEl) humEl.innerText = w.humidity;
+    if (windEl) windEl.innerText = w.wind;
+    if (visEl) visEl.innerText = w.visibility;
+}
+
+async function fetchLiveWeather() {
+    const FALLBACK = { location: 'Amaravati', temperature: '31\u00B0C', humidity: '64%', wind: '12 km/h', visibility: '8 km' };
+    try {
+        if (!navigator.geolocation) throw new Error('Geolocation not supported');
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
+        });
+        const { latitude: lat, longitude: lon } = position.coords;
+        const res = await fetch(`${API_BASE}/api/weather/current?lat=${lat}&lon=${lon}`, {
+            headers: { "ngrok-skip-browser-warning": "true" }
+        });
+        if (!res.ok) throw new Error(`Weather API failed: ${res.status}`);
+        const json = await res.json();
+        const d = json.data || {};
+        applyWeatherToTopBar({
+            location: d.location || FALLBACK.location,
+            temperature: d.temp_c != null ? d.temp_c + '\u00B0C' : FALLBACK.temperature,
+            humidity: d.humidity != null ? d.humidity + '%' : FALLBACK.humidity,
+            wind: d.wind_kph != null ? d.wind_kph + ' km/h' : FALLBACK.wind,
+            visibility: d.visibility_km != null ? d.visibility_km + ' km' : FALLBACK.visibility
+        });
+    } catch (err) {
+        console.log('Falling back to static weather data:', err.message);
+        applyWeatherToTopBar(FALLBACK);
+    }
+}
 
 function autoDetectLocation() {
     if (navigator.geolocation) {
@@ -637,6 +741,18 @@ function autoDetectLocation() {
             viewHistoryBtn.innerHTML = "View History";
         });
         
+
+        const pwaInstallBtn = document.getElementById('pwa-install-btn');
+        pwaInstallBtn?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            console.log('PWA install outcome:', outcome);
+            deferredInstallPrompt = null;
+            updateInstallButtonVisibility();
+        });
+        updateInstallButtonVisibility();
+
         closeHistoryModal.addEventListener('click', () => {
             historyModal.classList.add('hidden');
         });

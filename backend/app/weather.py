@@ -159,34 +159,38 @@ async def fetch_open_meteo_data(location_key: str) -> Dict[str, Any]:
 
 async def get_current_weather_by_coords(lat: float, lon: float) -> Dict[str, Any]:
     """
-    Calls WeatherAPI.com using lat/lon for the top-bar UI widget.
+    Calls OpenWeatherMap using lat/lon for the top-bar UI widget.
     Returns structured JSON with location, temperature, humidity, wind, visibility.
     Returns None on any failure so the endpoint can return a 500.
     """
-    if not WEATHERAPI_KEY:
-        print("[TOPBAR WEATHER] WEATHERAPI_KEY not set.")
+    if not OPENWEATHER_API_KEY:
+        print("[TOPBAR WEATHER] OPENWEATHER_API_KEY not set.")
         return None
 
     try:
-        url = f"https://api.weatherapi.com/v1/current.json?key={WEATHERAPI_KEY}&q={lat},{lon}&aqi=no"
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
         async with httpx.AsyncClient(timeout=8.0, headers=_HEADERS) as client:
             res = await client.get(url)
             res.raise_for_status()
             data = res.json()
 
-        location = data.get("location", {})
-        current = data.get("current", {})
+        # OpenWeatherMap returns wind speed in m/s, convert to km/h
+        wind_mps = data.get("wind", {}).get("speed", 0)
+        wind_kph = round(wind_mps * 3.6, 1)
+
+        # Visibility is in meters, convert to km
+        visibility_m = data.get("visibility", 8000)
+        visibility_km = round(visibility_m / 1000, 1)
 
         return {
-            "location": location.get("name", "Unknown"),
-            "region": location.get("region", ""),
-            "temp_c": current.get("temp_c"),
-            "humidity": current.get("humidity"),
-            "wind_kph": current.get("wind_kph"),
-            "visibility_km": current.get("vis_km"),
-            "condition": current.get("condition", {}).get("text", "Unknown"),
-            "icon": current.get("condition", {}).get("icon", ""),
-            "source": "weatherapi"
+            "location": data.get("name", "Unknown"),
+            "region": "",
+            "temp_c": round(data.get("main", {}).get("temp", 0)),
+            "humidity": data.get("main", {}).get("humidity", 0),
+            "wind_kph": wind_kph,
+            "visibility_km": visibility_km,
+            "condition": data.get("weather", [{}])[0].get("description", "Unknown").title(),
+            "source": "openweathermap"
         }
 
     except httpx.TimeoutException:

@@ -123,6 +123,30 @@ async def _call_gemini(contents: list, api_key: str) -> dict:
         return res.json()
 
 
+async def _call_gemini_with_retry(contents: list) -> dict:
+    """Try all available API keys on 429/503 errors before giving up."""
+    import asyncio
+    keys = list(VALID_KEYS)
+    random.shuffle(keys)
+
+    last_error = None
+    for i, key in enumerate(keys):
+        try:
+            return await _call_gemini(contents, key)
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            last_error = e
+            if status in (429, 503) and i < len(keys) - 1:
+                print(f"[RETRY] Key {i+1}/{len(keys)} got {status}, trying next key in 2s...")
+                await asyncio.sleep(2)
+                continue
+            raise
+        except Exception:
+            raise
+
+    raise last_error
+
+
 # ============================================================
 # MAIN CHAT PROCESSOR
 # ============================================================
@@ -130,8 +154,6 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
     try:
         if not VALID_KEYS:
             return "API keys are not configured. Please set GEMINI_API_KEY in your environment."
-
-        api_key = random.choice(VALID_KEYS)
 
         # 1. Build history context as plain text
         past_history = await get_chat_history(session_id)
@@ -161,7 +183,7 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
         print(f"[DEBUG] Calling Gemini REST API ({len(full_message)} chars)")
 
         # 4. First API call
-        result = await _call_gemini(contents, api_key)
+        result = await _call_gemini_with_retry(contents)
 
         # 5. Parse response
         candidate = result.get("candidates", [{}])[0]
@@ -207,7 +229,7 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
             })
 
             # Second API call with the complete conversation
-            result2 = await _call_gemini(contents, api_key)
+            result2 = await _call_gemini_with_retry(contents)
 
             candidate2 = result2.get("candidates", [{}])[0]
             parts2 = candidate2.get("content", {}).get("parts", [])
@@ -223,5 +245,7 @@ async def process_gemini_chat(session_id: str, user_message: str, location_key: 
         print(f"[ERROR] Gemini API HTTP error: {e.response.status_code} - {e.response.text}")
         return "Sorry, the weather service is temporarily unavailable. Please try again in a moment."
     except Exception as e:
-        print(f"[ERROR] Gemini Agent failed: {str(e)}")
+        import traceback
+        print(f"[ERROR] Gemini Agent failed: {type(e).__name__}: {e}")
+        traceback.print_exc()
         return "Sorry, I am facing some issues connecting to the weather servers right now. Please try again in a moment."

@@ -352,6 +352,51 @@
     </div>
 </div>
 
+<!-- Report Modal -->
+<div id="report-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-md bg-black/40 p-4">
+    <div class="bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gradient-to-r from-sky-500/10 to-purple-500/10">
+            <div>
+                <h2 class="text-xl font-bold text-on-surface dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">water_drop</span>
+                    14-Day Rain Report
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">Past 7 days and Next 7 days forecast</p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button id="download-csv-btn" class="hidden px-4 py-2 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 text-primary rounded-xl transition-colors font-semibold text-sm flex items-center gap-2 border border-primary/20 shadow-sm backdrop-blur-md">
+                    <span class="material-symbols-outlined text-[18px]">download</span>
+                    Download CSV
+                </button>
+                <button id="close-report-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+        </div>
+        <div class="p-6 overflow-y-auto" id="report-content">
+            <div id="report-loading" class="flex flex-col items-center justify-center py-10 gap-4 hidden">
+                <span class="material-symbols-outlined animate-spin text-primary text-4xl">autorenew</span>
+                <p class="text-gray-500 font-medium">Analyzing weather patterns...</p>
+            </div>
+            <div id="report-error" class="hidden text-center py-10 text-red-500 font-medium bg-red-50 dark:bg-red-900/20 rounded-xl"></div>
+            <div id="report-data" class="hidden flex flex-col gap-6">
+                <!-- Past Days -->
+                <div>
+                    <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-sm">history</span> Past 7 Days</h3>
+                    <div id="report-past-list" class="flex flex-col gap-2"></div>
+                </div>
+                <!-- Future Days -->
+                <div>
+                    <h3 class="font-bold text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-sm">update</span> Next 7 Days</h3>
+                    <div id="report-future-list" class="flex flex-col gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 
 let deferredInstallPrompt = null;
@@ -967,7 +1012,7 @@ function autoDetectLocation() {
   }
 
     // === 14-DAY REPORT MODAL LOGIC ===
-    (function() {
+    document.addEventListener('DOMContentLoaded', function() {
         const reportBtn = document.getElementById('report-btn');
         const reportModal = document.getElementById('report-modal');
         const closeReportBtn = document.getElementById('close-report-btn');
@@ -1003,6 +1048,32 @@ function autoDetectLocation() {
             return { icon: 'partly_cloudy_day', color: 'text-gray-500' };
         }
 
+        
+        let currentReportData = null;
+        const downloadCsvBtn = document.getElementById('download-csv-btn');
+
+        if (downloadCsvBtn) {
+            downloadCsvBtn.addEventListener('click', () => {
+                if (!currentReportData) return;
+                
+                let csv = "Date,Condition,Rain (mm),Rain Chance (%)\n";
+                currentReportData.forEach(day => {
+                    const iconData = getConditionIcon(day.code);
+                    csv += `${day.date},${iconData.icon},${day.rain_mm || 0},${day.rain_prob || 0}\n`;
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Anuman_14Day_Rain_Report.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            });
+        }
+
         async function fetchReportData(lat, lon) {
             try {
                 const res = await fetch(`${API_BASE}/api/weather/report?lat=${lat}&lon=${lon}`, {
@@ -1016,6 +1087,8 @@ function autoDetectLocation() {
 
                 const todayStr = new Date().toISOString().split('T')[0];
 
+                currentReportData = data.report;
+                if(downloadCsvBtn) downloadCsvBtn.classList.remove("hidden");
                 data.report.forEach(day => {
                     const isPast = day.date < todayStr;
                     const isToday = day.date === todayStr;
@@ -1062,6 +1135,7 @@ function autoDetectLocation() {
         reportBtn.addEventListener('click', () => {
             toggleReportModal(true);
             reportLoading.classList.remove('hidden');
+            if(downloadCsvBtn) downloadCsvBtn.classList.add("hidden");
             reportError.classList.add('hidden');
             reportData.classList.add('hidden');
 
@@ -1075,46 +1149,11 @@ function autoDetectLocation() {
                 fetchReportData(16.5062, 80.6480);
             }
         });
-    })();
+    });
 
 </script>
 
-<!-- Report Modal -->
-<div id="report-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-md bg-black/40 p-4">
-    <div class="bg-surface dark:bg-surface-dark border border-gray-200 dark:border-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gradient-to-r from-sky-500/10 to-purple-500/10">
-            <div>
-                <h2 class="text-xl font-bold text-on-surface dark:text-white flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">water_drop</span>
-                    14-Day Rain Report
-                </h2>
-                <p class="text-sm text-gray-500 mt-1">Past 7 days and Next 7 days forecast</p>
-            </div>
-            <button id="close-report-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto" id="report-content">
-            <div id="report-loading" class="flex flex-col items-center justify-center py-10 gap-4 hidden">
-                <span class="material-symbols-outlined animate-spin text-primary text-4xl">autorenew</span>
-                <p class="text-gray-500 font-medium">Analyzing weather patterns...</p>
-            </div>
-            <div id="report-error" class="hidden text-center py-10 text-red-500 font-medium bg-red-50 dark:bg-red-900/20 rounded-xl"></div>
-            <div id="report-data" class="hidden flex flex-col gap-6">
-                <!-- Past Days -->
-                <div>
-                    <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-sm">history</span> Past 7 Days</h3>
-                    <div id="report-past-list" class="flex flex-col gap-2"></div>
-                </div>
-                <!-- Future Days -->
-                <div>
-                    <h3 class="font-bold text-primary mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-sm">update</span> Next 7 Days</h3>
-                    <div id="report-future-list" class="flex flex-col gap-2"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 </body>
 </html>

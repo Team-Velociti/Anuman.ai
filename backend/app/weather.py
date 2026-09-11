@@ -160,45 +160,88 @@ async def fetch_open_meteo_data(location_key: str) -> Dict[str, Any]:
 async def get_current_weather_by_coords(lat: float, lon: float) -> Dict[str, Any]:
     """
     Calls OpenWeatherMap using lat/lon for the top-bar UI widget.
-    Returns structured JSON with location, temperature, humidity, wind, visibility.
+    Falls back to WeatherAPI if OpenWeatherMap key is missing or fails (e.g. inactive key).
     Returns None on any failure so the endpoint can return a 500.
     """
-    if not OPENWEATHER_API_KEY:
-        print("[TOPBAR WEATHER] OPENWEATHER_API_KEY not set.")
-        return None
+    async with httpx.AsyncClient(timeout=8.0, headers=_HEADERS) as client:
+        # --- ATTEMPT 1: OpenWeatherMap ---
+        if OPENWEATHER_API_KEY:
+            try:
+                url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+                res = await client.get(url)
+                if res.status_code == 200:
+                    data = res.json()
+                    wind_mps = data.get("wind", {}).get("speed", 0)
+                    visibility_m = data.get("visibility", 8000)
+                    return {
+                        "location": data.get("name", "Unknown"),
+                        "region": "",
+                        "temp_c": round(data.get("main", {}).get("temp", 0)),
+                        "humidity": data.get("main", {}).get("humidity", 0),
+                        "wind_kph": round(wind_mps * 3.6, 1),
+                        "visibility_km": round(visibility_m / 1000, 1),
+                        "condition": data.get("weather", [{}])[0].get("description", "Unknown").title(),
+                        "source": "openweathermap"
+                    }
+                else:
+                    print(f"[TOPBAR] OpenWeather failed with {res.status_code}. Falling back...")
+            except Exception as e:
+                print(f"[TOPBAR] OpenWeather crashed: {e}. Falling back...")
+        else:
+            print("[TOPBAR] OPENWEATHER_API_KEY not set. Falling back to WeatherAPI...")
 
+        # --- ATTEMPT 2: WeatherAPI ---
+        if WEATHERAPI_KEY:
+            try:
+                url = f"https://api.weatherapi.com/v1/current.json?key={WEATHERAPI_KEY}&q={lat},{lon}&aqi=no"
+                res = await client.get(url)
+                if res.status_code == 200:
+                    data = res.json()
+                    loc = data.get("location", {})
+                    cur = data.get("current", {})
+                    return {
+                        "location": loc.get("name", "Unknown"),
+                        "region": loc.get("region", ""),
+                        "temp_c": cur.get("temp_c"),
+                        "humidity": cur.get("humidity"),
+                        "wind_kph": cur.get("wind_kph"),
+                        "visibility_km": cur.get("vis_km"),
+                        "condition": cur.get("condition", {}).get("text", "Unknown"),
+                        "source": "weatherapi"
+                    }
+            except Exception as e:
+                print(f"[TOPBAR] WeatherAPI crashed: {e}")
+
+    return None
+
+
+async def get_rain_report_by_coords(lat: float, lon: float) -> Dict[str, Any]:
+    """
+    Fetches 7 days past and 7 days future precipitation data.
+    """
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=precipitation_sum,precipitation_probability_max,weather_code&past_days=7&forecast_days=7&timezone=auto"
     try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
-        async with httpx.AsyncClient(timeout=8.0, headers=_HEADERS) as client:
+        async with httpx.AsyncClient(timeout=10.0, headers=_HEADERS) as client:
             res = await client.get(url)
             res.raise_for_status()
             data = res.json()
-
-        # OpenWeatherMap returns wind speed in m/s, convert to km/h
-        wind_mps = data.get("wind", {}).get("speed", 0)
-        wind_kph = round(wind_mps * 3.6, 1)
-
-        # Visibility is in meters, convert to km
-        visibility_m = data.get("visibility", 8000)
-        visibility_km = round(visibility_m / 1000, 1)
-
-        return {
-            "location": data.get("name", "Unknown"),
-            "region": "",
-            "temp_c": round(data.get("main", {}).get("temp", 0)),
-            "humidity": data.get("main", {}).get("humidity", 0),
-            "wind_kph": wind_kph,
-            "visibility_km": visibility_km,
-            "condition": data.get("weather", [{}])[0].get("description", "Unknown").title(),
-            "source": "openweathermap"
-        }
-
-    except httpx.TimeoutException:
-        print(f"[TOPBAR WEATHER] Timeout for coords ({lat}, {lon})")
-        return None
-    except httpx.HTTPStatusError as e:
-        print(f"[TOPBAR WEATHER] HTTP {e.response.status_code} for coords ({lat}, {lon})")
-        return None
+            
+            daily = data.get("daily", {})
+            dates = daily.get("time", [])
+            rain_sums = daily.get("precipitation_sum", [])
+            rain_probs = daily.get("precipitation_probability_max", [])
+            weather_codes = daily.get("weather_code", [])
+            
+            report = []
+            for i in range(len(dates)):
+                report.append({
+                    "date": dates[i],
+                    "rain_mm": rain_sums[i] if rain_sums and i < len(rain_sums) else 0,
+                    "rain_prob": rain_probs[i] if rain_probs and i < len(rain_probs) else 0,
+                    "code": weather_codes[i] if weather_codes and i < len(weather_codes) else 0
+                })
+                
+            return {"status": "success", "report": report}
     except Exception as e:
-        print(f"[TOPBAR WEATHER] Unexpected error: {e}")
-        return None
+        print(f"[REPORT ERROR] {e}")
+        return {"status": "error", "message": str(e)}

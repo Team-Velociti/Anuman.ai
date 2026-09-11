@@ -202,6 +202,9 @@
                     <input id="location-search" type="text" value="Amaravati" placeholder="Search location..." class="w-full bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full pl-9 pr-3 py-2 text-sm text-on-surface dark:text-dark-on-surface focus:ring-1 focus:ring-primary-container outline-none">
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
+                    <button id="report-btn" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center justify-center" title="14-Day Rain Report">
+                        <span class="material-symbols-outlined">analytics</span>
+                    </button>
                     <button aria-label="Toggle Theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors" id="theme-toggle">
                         <span class="material-symbols-outlined dark-icon hidden">dark_mode</span>
                         <span class="material-symbols-outlined light-icon">light_mode</span>
@@ -962,6 +965,118 @@ function autoDetectLocation() {
         });
     });
   }
+
+    // === 14-DAY REPORT MODAL LOGIC ===
+    (function() {
+        const reportBtn = document.getElementById('report-btn');
+        const reportModal = document.getElementById('report-modal');
+        const closeReportBtn = document.getElementById('close-report-btn');
+        const reportLoading = document.getElementById('report-loading');
+        const reportError = document.getElementById('report-error');
+        const reportData = document.getElementById('report-data');
+        const pastList = document.getElementById('report-past-list');
+        const futureList = document.getElementById('report-future-list');
+
+        if (!reportBtn || !reportModal) return;
+
+        function toggleReportModal(show) {
+            if (show) {
+                reportModal.classList.remove('hidden');
+                setTimeout(() => reportModal.classList.remove('opacity-0'), 10);
+            } else {
+                reportModal.classList.add('opacity-0');
+                setTimeout(() => reportModal.classList.add('hidden'), 300);
+            }
+        }
+
+        // Close on X button
+        closeReportBtn.addEventListener('click', () => toggleReportModal(false));
+        // Close on backdrop click
+        reportModal.addEventListener('click', (e) => { if (e.target === reportModal) toggleReportModal(false); });
+
+        function getConditionIcon(code) {
+            if (code <= 3) return { icon: 'sunny', color: 'text-yellow-500' };
+            if (code <= 48) return { icon: 'cloud', color: 'text-gray-400' };
+            if (code <= 67) return { icon: 'rainy', color: 'text-blue-500' };
+            if (code <= 77) return { icon: 'ac_unit', color: 'text-sky-300' };
+            if (code <= 82) return { icon: 'thunderstorm', color: 'text-purple-500' };
+            return { icon: 'partly_cloudy_day', color: 'text-gray-500' };
+        }
+
+        async function fetchReportData(lat, lon) {
+            try {
+                const res = await fetch(`${API_BASE}/api/weather/report?lat=${lat}&lon=${lon}`, {
+                    headers: { "ngrok-skip-browser-warning": "true" }
+                });
+                if (!res.ok) throw new Error("API returned " + res.status);
+                const data = await res.json();
+
+                pastList.innerHTML = '';
+                futureList.innerHTML = '';
+
+                const todayStr = new Date().toISOString().split('T')[0];
+
+                data.report.forEach(day => {
+                    const isPast = day.date < todayStr;
+                    const isToday = day.date === todayStr;
+                    const dateObj = new Date(day.date + 'T00:00:00');
+                    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    const iconData = getConditionIcon(day.code);
+
+                    const html = `
+                        <div class="flex items-center justify-between p-3 rounded-xl ${isToday ? 'bg-primary/10 border border-primary/20' : 'bg-gray-50 dark:bg-gray-800/50'}">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined ${iconData.color}" style="font-variation-settings:'FILL' 1">${iconData.icon}</span>
+                                <div class="font-medium text-gray-800 dark:text-gray-200 ${isToday ? 'text-primary font-bold' : ''}">${isToday ? '\u2022 Today' : dayName}</div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm font-medium">
+                                <div class="flex flex-col items-end w-16">
+                                    <span class="text-gray-500 text-[10px] uppercase">Rain</span>
+                                    <span class="${day.rain_mm > 0 ? 'text-blue-500' : 'text-gray-400'}">${day.rain_mm != null ? day.rain_mm : 0} mm</span>
+                                </div>
+                                <div class="flex flex-col items-end w-16">
+                                    <span class="text-gray-500 text-[10px] uppercase">Chance</span>
+                                    <span class="${day.rain_prob > 50 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-400'}">${day.rain_prob != null ? day.rain_prob : 0}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (isPast) {
+                        pastList.insertAdjacentHTML('beforeend', html);
+                    } else {
+                        futureList.insertAdjacentHTML('beforeend', html);
+                    }
+                });
+
+                reportLoading.classList.add('hidden');
+                reportData.classList.remove('hidden');
+            } catch (e) {
+                console.error('Report fetch error:', e);
+                reportLoading.classList.add('hidden');
+                reportError.textContent = "Unable to generate report. Please try again later.";
+                reportError.classList.remove('hidden');
+            }
+        }
+
+        reportBtn.addEventListener('click', () => {
+            toggleReportModal(true);
+            reportLoading.classList.remove('hidden');
+            reportError.classList.add('hidden');
+            reportData.classList.add('hidden');
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => fetchReportData(pos.coords.latitude, pos.coords.longitude),
+                    () => fetchReportData(16.5062, 80.6480),
+                    { timeout: 5000 }
+                );
+            } else {
+                fetchReportData(16.5062, 80.6480);
+            }
+        });
+    })();
+
 </script>
 
 <!-- Report Modal -->
